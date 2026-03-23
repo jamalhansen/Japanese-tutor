@@ -47,6 +47,7 @@ function showNextCard() {
     }
     
     document.getElementById('mnemonic-display').innerText = currentCard.mnemonic || "";
+    document.getElementById('mnemonic-suggestions').innerHTML = "";
     document.getElementById('example-display').innerText = "Loading example...";
     document.querySelector('.card-back').classList.add('hidden');
     document.getElementById('controls').classList.add('hidden');
