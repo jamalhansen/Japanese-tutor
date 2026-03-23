@@ -86,3 +86,8 @@ def mount_static(pkg_root: Path):
     static_path = pkg_root / "static"
     if static_path.exists():
         app.mount("/", StaticFiles(directory=str(static_path), html=True), name="static")
+    else:
+        # Fallback for development if static is one level up from src/japanese_tutor
+        static_path = pkg_root.parent / "static"
+        if static_path.exists():
+            app.mount("/", StaticFiles(directory=str(static_path), html=True), name="static")

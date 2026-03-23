@@ -1,4 +1,3 @@
-import sys
 from pathlib import Path
 from typing import Optional
 
@@ -25,10 +24,10 @@ from .llm import LLMHelper
 
 _TOOL = register_tool("japanese-tutor")
 
-cli = typer.Typer(help="Japanese Tutor SRS application.")
+app = typer.Typer(help="Japanese Tutor SRS application.")
 
-@cli.command()
-def serve(
+@app.command()
+def run(
     port: int = typer.Option(8421, help="Server port"),
     db_path: Optional[Path] = typer.Option(None, help="Custom SQLite DB path"),
     provider: str = provider_option(),
@@ -39,12 +38,15 @@ def serve(
     debug: bool = debug_option(),
 ):
     """Start the Japanese Tutor SRS server."""
+    
+    # 1. Resolve configuration
     actual_dry_run = resolve_dry_run(dry_run, no_llm)
     
-    # Initialize core components
+    # 2. Initialize database
     api.db = Database(db_path)
     api.db.populate_characters(HIRAGANA + KATAKANA)
     
+    # 3. Initialize LLM helper
     try:
         llm_provider = resolve_provider(
             PROVIDERS, 
@@ -59,7 +61,7 @@ def serve(
         if verbose or debug:
             typer.secho(f"Warning: Could not initialize LLM provider: {e}", fg=typer.colors.YELLOW)
 
-    # Mount static files
+    # 4. Setup FastAPI and mount static files
     pkg_root = Path(__file__).parent.parent.parent
     api.mount_static(pkg_root)
     
@@ -70,10 +72,7 @@ def serve(
     uvicorn.run(api.app, host="0.0.0.0", port=port)
 
 def main_entry():
-    # If no command provided, default to 'serve'
-    if len(sys.argv) == 1:
-        sys.argv.append("serve")
-    cli()
+    app()
 
 if __name__ == "__main__":
     main_entry()
