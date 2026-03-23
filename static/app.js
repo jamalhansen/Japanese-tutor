@@ -92,32 +92,41 @@ async function submitReview(rating) {
 
 document.getElementById('generate-mnemonic').onclick = async () => {
     const btn = document.getElementById('generate-mnemonic');
+    const originalText = btn.innerText;
     btn.innerText = "Thinking...";
     btn.disabled = true;
     
-    const response = await fetch('/api/mnemonics/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ character: currentCard.character, romaji: currentCard.romaji })
-    });
-    
-    const data = await response.json();
-    const list = document.getElementById('mnemonic-suggestions');
-    list.innerHTML = "";
-    data.suggestions.forEach(s => {
-        const div = document.createElement('div');
-        div.className = "mnemonic-suggestion";
-        div.innerText = s;
-        div.style.cursor = "pointer";
-        div.style.padding = "5px";
-        div.style.borderBottom = "1px solid #eee";
-        div.onclick = () => {
-            document.getElementById('mnemonic-display').innerText = s;
-        };
-        list.appendChild(div);
-    });
-    btn.innerText = "Help me remember this";
-    btn.disabled = false;
+    try {
+        const response = await fetch('/api/mnemonics/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ character: currentCard.character, romaji: currentCard.romaji })
+        });
+        
+        if (!response.ok) throw new Error("Failed to generate mnemonics");
+        
+        const data = await response.json();
+        const list = document.getElementById('mnemonic-suggestions');
+        list.innerHTML = "";
+        data.suggestions.forEach(s => {
+            const div = document.createElement('div');
+            div.className = "mnemonic-suggestion";
+            div.innerText = s;
+            div.style.cursor = "pointer";
+            div.style.padding = "5px";
+            div.style.borderBottom = "1px solid #eee";
+            div.onclick = () => {
+                document.getElementById('mnemonic-display').innerText = s;
+            };
+            list.appendChild(div);
+        });
+    } catch (err) {
+        console.error(err);
+        alert("Could not reach the LLM. Is Ollama running?");
+    } finally {
+        btn.innerText = originalText;
+        btn.disabled = false;
+    }
 };
 
 function showView(viewName) {

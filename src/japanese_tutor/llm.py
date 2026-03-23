@@ -26,27 +26,33 @@ class LLMHelper:
         )
 
         with timed_run("japanese-tutor", self.provider.model, source_location=f"mnemonic:{character}") as _run:
-            result = self.provider.complete(
+            raw_result = self.provider.complete(
                 system=system,
                 user=user,
                 response_model=MnemonicList
             )
+            result = MnemonicList.model_validate(raw_result)
             _run.item_count = len(result.suggestions)
             return [s.body for s in result.suggestions]
 
     def generate_adaptive_example(self, character: str, mastered_vocab: List[str]) -> str:
         system = (
-            "You are a Japanese language tutor. Generate a simple example sentence "
-            "using the provided character. Use ONLY the vocabulary from the mastered list "
-            "where possible. If essential particles or grammar are needed, keep them basic."
+            "You are a Japanese language tutor. Your task is to generate a simple example sentence "
+            f"that MUST contain the Japanese character: '{character}'.\n\n"
+            "Constraints:\n"
+            "1. The sentence MUST actually use the character provided.\n"
+            "2. Use ONLY characters/vocabulary from the mastered list provided below where possible.\n"
+            "3. If the mastered list is empty or insufficient, use basic grammar (は, です, ます) "
+            "to create the simplest possible meaningful sentence.\n"
+            "4. Provide ONLY the Japanese sentence, no translation or romaji."
         )
-        vocab_text = ", ".join(mastered_vocab)
-        user = f"Character: {character}\nMastered Vocabulary: {vocab_text}\n\nGenerate one short example sentence."
+        vocab_text = ", ".join(mastered_vocab) if mastered_vocab else "None yet (use only basic particles/grammar)."
+        user = f"Target Character: {character}\nMastered Vocabulary: {vocab_text}\n\nGenerate the example sentence:"
 
         with timed_run("japanese-tutor", self.provider.model, source_location=f"example:{character}") as _run:
             result = self.provider.complete(system=system, user=user)
             _run.item_count = 1
-            return result
+            return result.strip()
 
     def generate_session_debrief(self, missed_chars: List[str], recurring_chars: List[str]) -> str:
         system = (

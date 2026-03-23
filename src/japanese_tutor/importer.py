@@ -34,12 +34,13 @@ class TutorLogic:
             with open(image_path, "rb") as f:
                 img_data = f.read()
             
-            result = self.provider.complete(
+            raw_result = self.provider.complete(
                 system=system,
                 user=user,
                 response_model=ReviewResult,
                 images=[img_data]
             )
+            result = ReviewResult.model_validate(raw_result)
             _run.item_count = 1
             return result
 
@@ -84,10 +85,11 @@ class TutorLogic:
         
         logger.info(f"Extracting {mode} data using LLM...")
         with timed_run("japanese-tutor", self.provider.model, source_location=str(image_path)) as _run:
-            result = self.provider.complete(
+            raw_result = self.provider.complete(
                 system=system,
                 user=user,
                 response_model=CardList
             )
+            result = CardList.model_validate(raw_result)
             _run.item_count = len(result.cards)
             return result.cards
