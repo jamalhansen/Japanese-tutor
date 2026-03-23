@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List, Optional
+from typing import Annotated, List, Optional
 
 import typer
 import uvicorn
@@ -7,16 +7,28 @@ from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from local_first_common.cli import resolve_provider
+from local_first_common.cli import (
+    debug_option,
+    dry_run_option,
+    model_option,
+    no_llm_option,
+    provider_option,
+    resolve_dry_run,
+    resolve_provider,
+    verbose_option,
+)
 from local_first_common.providers import PROVIDERS
+from local_first_common.tracking import register_tool
 
 from .characters import HIRAGANA, KATAKANA
 from .db import Database
 from .llm import LLMHelper
 from .srs import SM2
 
+_TOOL = register_tool("japanese-tutor")
+
 app = FastAPI(title="Japanese Tutor")
-cli = typer.Typer()
+cli = typer.Typer(help="Japanese Tutor SRS application.")
 db: Optional[Database] = None
 llm_helper: Optional[LLMHelper] = None
 
@@ -29,11 +41,25 @@ class MnemonicRequest(BaseModel):
     character: str
     romaji: str
 
+class DebriefRequest(BaseModel):
+    missed: List[str]
+    recurring: List[str] = []
+
 # API Routes
 @app.get("/api/cards/due")
 def get_due_cards(stage: Optional[str] = None):
     if not db:
         raise HTTPException(status_code=500, detail="Database not initialized")
+    
+    if stage is None:
+        # Determine current stage
+        if not db.is_stage_mastered("hiragana"):
+            stage = "hiragana"
+        elif not db.is_stage_mastered("katakana"):
+            stage = "katakana"
+        else:
+            stage = "kanji"
+            
     return db.get_due_cards(stage=stage)
 
 @app.post("/api/reviews")
@@ -80,10 +106,10 @@ def get_example(character: str):
     return {"example": example}
 
 @app.post("/api/session/debrief")
-def post_debrief(missed: List[str], recurring: List[str]):
+def post_debrief(req: DebriefRequest):
     if not llm_helper:
         raise HTTPException(status_code=503, detail="LLM unavailable")
-    debrief = llm_helper.generate_session_debrief(missed, recurring)
+    debrief = llm_helper.generate_session_debrief(req.missed, req.recurring)
     return {"debrief": debrief}
 
 @app.post("/api/mnemonics/generate")
@@ -93,34 +119,56 @@ def generate_mnemonics(req: MnemonicRequest):
     suggestions = llm_helper.generate_mnemonics(req.character, req.romaji)
     return {"suggestions": suggestions}
 
-@cli.command()
-def serve(
-    port: int = 8421,
-    db_path: Optional[Path] = None,
-    provider: str = "ollama",
-    model: Optional[str] = None,
+@cli.callback(invoke_without_command=True)
+def main(
+    ctx: typer.Context,
+    port: Annotated[int, typer.Option(help="Server port")] = 8421,
+    db_path: Annotated[Optional[Path], typer.Option(help="Custom SQLite DB path")] = None,
+    provider_name: Annotated[str, provider_option(default="ollama")] = "ollama",
+    model: Annotated[Optional[str], model_option()] = None,
+    importer_model: Annotated[Optional[str], typer.Option(help="Model for OCR/Vision tasks (e.g. @vision)")] = None,
+    dry_run: Annotated[bool, dry_run_option()] = False,
+    no_llm: Annotated[bool, no_llm_option()] = False,
+    verbose: Annotated[bool, verbose_option()] = False,
+    debug: Annotated[bool, debug_option()] = False,
 ):
     """Start the Japanese Tutor SRS server."""
+    if ctx.invoked_subcommand is not None:
+        return
+        
     global db, llm_helper
+    
+    # Standard rule: --no-llm always implies --dry-run
+    dry_run = resolve_dry_run(dry_run, no_llm)
+    
     db = Database(db_path)
     db.populate_characters(HIRAGANA + KATAKANA)
     
     try:
-        llm_provider = resolve_provider(PROVIDERS, provider, model=model)
+        llm_provider = resolve_provider(
+            PROVIDERS, 
+            provider_name, 
+            model=model, 
+            debug=debug, 
+            verbose=verbose, 
+            no_llm=no_llm
+        )
         llm_helper = LLMHelper(llm_provider)
     except Exception as e:
-        print(f"Warning: Could not initialize LLM provider: {e}")
+        if verbose or debug:
+            print(f"Warning: Could not initialize LLM provider: {e}")
 
     # Static Files (UI)
-    # Search for static folder relative to this file
     pkg_root = Path(__file__).parent.parent.parent
     static_path = pkg_root / "static"
     if static_path.exists():
         app.mount("/", StaticFiles(directory=static_path, html=True), name="static")
-    else:
-        print(f"Warning: Static files not found at {static_path}")
-
+    
+    print(f"Starting server at http://localhost:{port}")
     uvicorn.run(app, host="0.0.0.0", port=port)
+
+def main_entry():
+    cli()
 
 if __name__ == "__main__":
     cli()

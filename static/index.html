@@ -10,12 +10,17 @@
     <div id="app">
         <header>
             <h1>Japanese Tutor</h1>
+            <nav>
+                <button onclick="showView('study')">Study</button>
+                <button onclick="showView('progress')">Progress</button>
+            </nav>
             <div id="stats">
                 <span id="due-count">Due: 0</span>
             </div>
         </header>
 
-        <main id="study-view">
+        <main id="study-view" class="view">
+            <!-- study view content remains same -->
             <div id="card" class="card">
                 <div class="card-front">
                     <div id="char-display"></div>
@@ -38,6 +43,11 @@
             </div>
             
             <button id="show-answer">Show Answer</button>
+        </main>
+
+        <main id="progress-view" class="view hidden">
+            <h2>Your Progress</h2>
+            <div id="mastery-grid" class="mastery-grid"></div>
         </main>
     </div>
     <script src="app.js"></script>

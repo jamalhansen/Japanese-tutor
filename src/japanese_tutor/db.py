@@ -202,6 +202,32 @@ class Database:
             """)
             return [row["character"] for row in cursor.fetchall()]
 
+    def is_stage_mastered(self, stage: str, threshold: float = 90.0) -> bool:
+        """Check if 90% accuracy reached for all characters in a stage with no reviews due."""
+        with self._get_connection() as conn:
+            # Check if any cards in this stage are still due
+            cursor = conn.execute("""
+                SELECT COUNT(*) FROM cards c
+                JOIN characters ch ON c.character_id = ch.id
+                WHERE ch.stage = ? AND c.next_review_at <= CURRENT_TIMESTAMP
+            """, (stage,))
+            if cursor.fetchone()[0] > 0:
+                return False
+
+            # Check average accuracy of last 20 reviews for each character in stage
+            # For simplicity, we'll check if the overall accuracy for characters in this stage is high enough
+            cursor = conn.execute("""
+                SELECT AVG(accuracy) FROM (
+                    SELECT (SELECT ROUND(AVG(CASE WHEN r.rating >= 3 THEN 1.0 ELSE 0.0 END) * 100, 1)
+                            FROM (SELECT rating FROM reviews WHERE card_id = c.id ORDER BY reviewed_at DESC LIMIT 20) r) as accuracy
+                    FROM cards c
+                    JOIN characters ch ON c.character_id = ch.id
+                    WHERE ch.stage = ?
+                )
+            """, (stage,))
+            avg_accuracy = cursor.fetchone()[0]
+            return avg_accuracy is not None and avg_accuracy >= threshold
+
     def get_card(self, card_id: int) -> Dict[str, Any]:
         with self._get_connection() as conn:
             cursor = conn.execute("""

@@ -1,4 +1,4 @@
-from src.japanese_tutor.srs import SM2
+from japanese_tutor.srs import SM2
 
 def test_sm2_first_review_correct():
     # rating 5, rep 0, interval 0, ef 2.5

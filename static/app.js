@@ -1,5 +1,7 @@
 let currentCard = null;
 let dueCards = [];
+let sessionMissed = [];
+let sessionCorrect = [];
 
 async function fetchDueCards() {
     const response = await fetch('/api/cards/due');
@@ -8,8 +10,25 @@ async function fetchDueCards() {
     if (dueCards.length > 0) {
         showNextCard();
     } else {
-        document.getElementById('char-display').innerText = "All done! 🎉";
-        document.getElementById('show-answer').classList.add('hidden');
+        showSessionSummary();
+    }
+}
+
+async function showSessionSummary() {
+    document.getElementById('char-display').innerText = "All done! 🎉";
+    document.getElementById('show-answer').classList.add('hidden');
+    document.querySelector('.card-back').classList.add('hidden');
+    document.getElementById('controls').classList.add('hidden');
+    
+    if (sessionMissed.length > 0) {
+        document.getElementById('example-display').innerText = "Analyzing your session...";
+        const debriefRes = await fetch('/api/session/debrief', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ missed: sessionMissed, recurring: [] })
+        });
+        const data = await debriefRes.json();
+        document.getElementById('example-display').innerText = data.debrief;
     }
 }
 
@@ -18,11 +37,9 @@ function showNextCard() {
     document.getElementById('char-display').innerText = currentCard.character;
     document.getElementById('stage-badge').innerText = currentCard.stage;
     
-    // Hide back
     const romajiElem = document.getElementById('romaji-display');
     romajiElem.innerText = currentCard.romaji;
     
-    // Spec: Romaji hidden automatically if romaji_visible is 0
     if (currentCard.romaji_visible === 0) {
         romajiElem.classList.add('hidden-faded');
     } else {
@@ -30,11 +47,11 @@ function showNextCard() {
     }
     
     document.getElementById('mnemonic-display').innerText = currentCard.mnemonic || "";
+    document.getElementById('example-display').innerText = "Loading example...";
     document.querySelector('.card-back').classList.add('hidden');
     document.getElementById('controls').classList.add('hidden');
     document.getElementById('show-answer').classList.remove('hidden');
     
-    // Fetch example sentence
     fetchExample(currentCard.character);
 }
 
@@ -51,6 +68,12 @@ document.getElementById('show-answer').onclick = () => {
 };
 
 async function submitReview(rating) {
+    if (rating < 3) {
+        sessionMissed.push(currentCard.character);
+    } else {
+        sessionCorrect.push(currentCard.character);
+    }
+
     await fetch('/api/reviews', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -63,7 +86,7 @@ async function submitReview(rating) {
     if (dueCards.length > 0) {
         showNextCard();
     } else {
-        await fetchDueCards(); // Double check
+        showSessionSummary();
     }
 }
 
@@ -85,15 +108,46 @@ document.getElementById('generate-mnemonic').onclick = async () => {
         const div = document.createElement('div');
         div.className = "mnemonic-suggestion";
         div.innerText = s;
+        div.style.cursor = "pointer";
+        div.style.padding = "5px";
+        div.style.borderBottom = "1px solid #eee";
         div.onclick = () => {
             document.getElementById('mnemonic-display').innerText = s;
-            // TODO: API to save this choice
         };
         list.appendChild(div);
     });
     btn.innerText = "Help me remember this";
     btn.disabled = false;
 };
+
+function showView(viewName) {
+    document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
+    document.getElementById(`${viewName}-view`).classList.remove('hidden');
+    if (viewName === 'progress') {
+        renderProgress();
+    }
+}
+
+async function renderProgress() {
+    const response = await fetch('/api/mastery');
+    const stats = await response.json();
+    const grid = document.getElementById('mastery-grid');
+    grid.innerHTML = "";
+    
+    stats.forEach(s => {
+        const div = document.createElement('div');
+        div.className = "mastery-item";
+        div.innerText = s.character;
+        div.title = `${s.romaji} - Accuracy: ${s.accuracy || 0}%`;
+        
+        const alpha = (s.accuracy || 0) / 100;
+        div.style.backgroundColor = `rgba(52, 199, 89, ${alpha})`;
+        if (alpha < 0.3) div.style.color = "black";
+        else div.style.color = "white";
+        
+        grid.appendChild(div);
+    });
+}
 
 // Start
 fetchDueCards();

@@ -94,3 +94,34 @@ button {
     background: #f9f9f9;
     border-radius: 6px;
 }
+
+.mastery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+    gap: 8px;
+    margin-top: 20px;
+}
+
+.mastery-item {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    font-weight: bold;
+    cursor: default;
+    background-color: #eee;
+}
+
+nav {
+    display: flex;
+    gap: 15px;
+}
+
+nav button {
+    background: none;
+    color: #007aff;
+    border: none;
+    padding: 5px 10px;
+}

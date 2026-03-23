@@ -1,5 +1,5 @@
 import pytest
-from src.japanese_tutor.db import Database
+from japanese_tutor.db import Database
 
 @pytest.fixture
 def db(tmp_path):

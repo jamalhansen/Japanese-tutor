@@ -21,10 +21,25 @@ A local-first Japanese Spaced Repetition System (SRS) for learning Hiragana, Kat
    ```
    Open `http://localhost:8421` in your browser.
 
+## LLM Model Recommendations
+
+This tool performs best with models that have strong Japanese language support.
+
+### Recommended (Ollama)
+- **`qwen2.5:7b`** (~4.7 GB): **Highly Recommended.** Best balance of Japanese accuracy and speed.
+- **`qwen2.5:3b`** (~1.9 GB): Good alternative for machines with less RAM (8GB).
+- **`phi4-mini`** (~2.3 GB): Fast and lightweight, used as default.
+
+### Model Setup
+```bash
+ollama pull qwen2.5:7b
+```
+
 ## Configuration
 - `--port`: Change the server port (default: 8421).
 - `--db-path`: Custom SQLite database path.
-- `--provider`: LLM provider (ollama, anthropic, etc.).
+- `--provider`: LLM provider (`ollama`, `gemini`, `anthropic`).
+- `--model`: Explicit model name or alias (`@best`, `@fast`).
 
 ## Development
 ```bash
