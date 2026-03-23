@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Japanese Tutor</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <header>
+            <h1>Japanese Tutor</h1>
+            <div id="stats">
+                <span id="due-count">Due: 0</span>
+            </div>
+        </header>
+
+        <main id="study-view">
+            <div id="card" class="card">
+                <div class="card-front">
+                    <div id="char-display"></div>
+                    <div id="stage-badge"></div>
+                </div>
+                <div class="card-back hidden">
+                    <div id="romaji-display"></div>
+                    <div id="mnemonic-display"></div>
+                    <div id="example-display" class="example-text"></div>
+                    <button id="generate-mnemonic">Help me remember this</button>
+                    <div id="mnemonic-suggestions"></div>
+                </div>
+            </div>
+
+            <div id="controls" class="hidden">
+                <button onclick="submitReview(0)" class="btn-again">Again</button>
+                <button onclick="submitReview(3)" class="btn-hard">Hard</button>
+                <button onclick="submitReview(4)" class="btn-good">Good</button>
+                <button onclick="submitReview(5)" class="btn-easy">Easy</button>
+            </div>
+            
+            <button id="show-answer">Show Answer</button>
+        </main>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>

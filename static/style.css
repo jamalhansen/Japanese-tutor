@@ -1,0 +1,96 @@
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: #f5f5f7;
+    display: flex;
+    justify-content: center;
+    padding: 20px;
+}
+
+#app {
+    width: 100%;
+    max-width: 600px;
+}
+
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
+.card {
+    background: white;
+    border-radius: 12px;
+    padding: 60px 40px;
+    text-align: center;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    min-height: 200px;
+    margin-bottom: 20px;
+}
+
+#char-display {
+    font-size: 8rem;
+    font-weight: bold;
+}
+
+#romaji-display {
+    font-size: 2rem;
+    margin-bottom: 20px;
+    color: #666;
+}
+
+.hidden {
+    display: none !important;
+}
+
+#controls {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+button {
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 1rem;
+    transition: background 0.2s;
+}
+
+#show-answer {
+    width: 100%;
+    background-color: #007aff;
+    color: white;
+}
+
+.btn-again { background: #ff3b30; color: white; }
+.btn-hard { background: #ff9500; color: white; }
+.btn-good { background: #34c759; color: white; }
+.btn-easy { background: #5856d6; color: white; }
+
+#mnemonic-display {
+    font-style: italic;
+    margin: 20px 0;
+    color: #555;
+}
+
+.hidden-faded {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.5s;
+}
+
+.card:hover .hidden-faded {
+    opacity: 0.1; /* Barely visible on hover as a hint */
+}
+
+.example-text {
+    font-size: 1.2rem;
+    color: #444;
+    margin: 15px 0;
+    padding: 10px;
+    background: #f9f9f9;
+    border-radius: 6px;
+}
