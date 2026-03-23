@@ -26,3 +26,15 @@ class ReviewResult(BaseModel):
     post_type: Literal["vocabulary", "kanji", "grammar", "mixed"] = Field(..., description="Inferred content type.")
     word_count: int = Field(..., description="Approximate word count of extracted text.")
     summary: str = Field(..., description="2-3 sentence verdict on the extraction.")
+
+class ReviewSubmission(BaseModel):
+    card_id: int
+    rating: int
+
+class MnemonicRequest(BaseModel):
+    character: str
+    romaji: str
+
+class DebriefRequest(BaseModel):
+    missed: List[str]
+    recurring: List[str] = []
