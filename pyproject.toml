@@ -18,7 +18,7 @@ dependencies = [
 ]
 
 [project.scripts]
-japanese-tutor = "japanese_tutor.main:main_entry"
+japanese-tutor = "japanese_tutor.logic:main_entry"
 
 [build-system]
 requires = ["hatchling"]
