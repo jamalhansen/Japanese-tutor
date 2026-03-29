@@ -2,7 +2,7 @@ import logging
 from pathlib import Path
 from typing import List, Literal, Optional, Type, Union
 
-from local_first_common.tracking import register_tool, timed_run
+from local_first_common.tracking import timed_run
 from local_first_common.providers.base import BaseProvider
 from pydantic import BaseModel
 
@@ -14,7 +14,6 @@ from .prompts import (
 )
 from .schema import GrammarCard, KanjiCard, ReviewResult, VocabularyCard
 
-_TOOL = register_tool("japanese-tutor")
 logger = logging.getLogger(__name__)
 
 class TutorLogic:
