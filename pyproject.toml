@@ -5,15 +5,13 @@ description = "A local-first Japanese tutor with SRS and mnemonic generation"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "anthropic>=0.84.0",
-    "google-genai>=1.65.0",
+    "fastapi>=0.115.0",
     "llmwhisperer-client>=0.1.0",
-    "local-first-common",
+    "local-first-common[anthropic,gemini]",
+    "pillow>=11.0.0",
     "pydantic>=2.12.5",
     "rich>=14.3.3",
     "typer>=0.15.0",
-    "pillow>=11.0.0",
-    "fastapi>=0.115.0",
     "uvicorn>=0.34.0",
 ]
 
