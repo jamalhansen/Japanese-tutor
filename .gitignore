@@ -24,3 +24,9 @@ venv/
 CLAUDE.md
 uv.toml
 .DS_Store
+
+# Workspace standard ignores
+*.pyc
+*.pyd
+*.pyo
+.venv/
