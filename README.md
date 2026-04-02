@@ -17,7 +17,7 @@ A local-first Japanese Spaced Repetition System (SRS) for learning Hiragana, Kat
 
 2. Start the server:
    ```bash
-   uv run japanese-tutor
+   uv run japanese-tutor run
    ```
    Open `http://localhost:8421` in your browser.
 
