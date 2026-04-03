@@ -62,6 +62,16 @@ async function fetchExample(char) {
     document.getElementById('example-display').innerText = data.example || "";
 }
 
+async function saveMnemonic(body, source = "manual") {
+    if (!currentCard) return;
+    
+    await fetch('/api/mnemonics/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ card_id: currentCard.card_id, body, source })
+    });
+}
+
 document.getElementById('show-answer').onclick = () => {
     document.querySelector('.card-back').classList.remove('hidden');
     document.getElementById('controls').classList.remove('hidden');
@@ -91,6 +101,15 @@ async function submitReview(rating) {
     }
 }
 
+document.getElementById('edit-mnemonic').onclick = async () => {
+    const current = document.getElementById('mnemonic-display').innerText;
+    const mnemonic = prompt("Enter your mnemonic phrase:", current);
+    if (mnemonic !== null) {
+        document.getElementById('mnemonic-display').innerText = mnemonic;
+        await saveMnemonic(mnemonic, "manual");
+    }
+};
+
 document.getElementById('generate-mnemonic').onclick = async () => {
     const btn = document.getElementById('generate-mnemonic');
     const originalText = btn.innerText;
@@ -116,8 +135,9 @@ document.getElementById('generate-mnemonic').onclick = async () => {
             div.style.cursor = "pointer";
             div.style.padding = "5px";
             div.style.borderBottom = "1px solid #eee";
-            div.onclick = () => {
+            div.onclick = async () => {
                 document.getElementById('mnemonic-display').innerText = s;
+                await saveMnemonic(s, "ai-suggestion");
             };
             list.appendChild(div);
         });

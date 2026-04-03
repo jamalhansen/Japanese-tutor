@@ -143,6 +143,10 @@ class Database:
         now = datetime.now()
         next_review = now + timedelta(days=next_interval)
         
+        # Convert to strings for Python 3.12+ sqlite3 compatibility
+        now_str = now.isoformat()
+        next_review_str = next_review.isoformat()
+        
         with self._get_connection() as conn:
             cursor = conn.execute("SELECT consecutive_correct, romaji_visible FROM cards WHERE id = ?", (card_id,))
             current = cursor.fetchone()
@@ -167,12 +171,12 @@ class Database:
                     consecutive_correct = ?,
                     romaji_visible = ?
                 WHERE id = ?
-            """, (next_ef, next_interval, next_repetitions, next_review, now, consecutive, visible, card_id))
+            """, (next_ef, next_interval, next_repetitions, next_review_str, now_str, consecutive, visible, card_id))
             
             conn.execute("""
                 INSERT INTO reviews (card_id, rating, reviewed_at)
                 VALUES (?, ?, ?)
-            """, (card_id, rating, now))
+            """, (card_id, rating, now_str))
 
     def get_mastery_stats(self, stage: Optional[str] = None) -> List[Dict[str, Any]]:
         with self._get_connection() as conn:
@@ -231,10 +235,28 @@ class Database:
     def get_card(self, card_id: int) -> Dict[str, Any]:
         with self._get_connection() as conn:
             cursor = conn.execute("""
-                SELECT c.*, ch.character, ch.romaji, ch.stage
+                SELECT c.*, ch.character, ch.romaji, ch.stage, ch.id as char_id
                 FROM cards c
                 JOIN characters ch ON c.character_id = ch.id
                 WHERE c.id = ?
             """, (card_id,))
             row = cursor.fetchone()
             return dict(row) if row else {}
+
+    def save_mnemonic(self, character_id: int, body: str, source: str = "manual"):
+        with self._get_connection() as conn:
+            # Check if association already exists
+            cursor = conn.execute("SELECT id FROM associations WHERE character_id = ?", (character_id,))
+            row = cursor.fetchone()
+            
+            if row:
+                conn.execute("""
+                    UPDATE associations 
+                    SET body = ?, source = ?, chosen_at = CURRENT_TIMESTAMP 
+                    WHERE id = ?
+                """, (body, source, row["id"]))
+            else:
+                conn.execute("""
+                    INSERT INTO associations (character_id, body, source)
+                    VALUES (?, ?, ?)
+                """, (character_id, body, source))

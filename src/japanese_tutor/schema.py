@@ -35,6 +35,11 @@ class MnemonicRequest(BaseModel):
     character: str
     romaji: str
 
+class MnemonicSaveRequest(BaseModel):
+    card_id: int
+    body: str
+    source: str = "manual"
+
 class DebriefRequest(BaseModel):
     missed: List[str]
     recurring: List[str] = []

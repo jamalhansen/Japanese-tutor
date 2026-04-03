@@ -6,7 +6,7 @@ from pathlib import Path
 from .db import Database
 from .llm import LLMHelper
 from .srs import SM2
-from .schema import ReviewSubmission, MnemonicRequest, DebriefRequest
+from .schema import ReviewSubmission, MnemonicRequest, DebriefRequest, MnemonicSaveRequest
 
 app = FastAPI(title="Japanese Tutor")
 
@@ -81,6 +81,18 @@ def generate_mnemonics(req: MnemonicRequest):
         raise HTTPException(status_code=503, detail="LLM provider not available")
     suggestions = llm_helper.generate_mnemonics(req.character, req.romaji)
     return {"suggestions": suggestions}
+
+@app.post("/api/mnemonics/save")
+def save_mnemonic(req: MnemonicSaveRequest):
+    if not db:
+        raise HTTPException(status_code=500, detail="Database not initialized")
+    
+    card = db.get_card(req.card_id)
+    if not card:
+        raise HTTPException(status_code=404, detail="Card not found")
+        
+    db.save_mnemonic(card["character_id"], req.body, req.source)
+    return {"status": "ok"}
 
 def mount_static(pkg_root: Path):
     static_path = pkg_root / "static"

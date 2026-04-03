@@ -70,10 +70,25 @@ button {
 .btn-good { background: #34c759; color: white; }
 .btn-easy { background: #5856d6; color: white; }
 
+.mnemonic-section {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin: 20px 0;
+}
+
 #mnemonic-display {
     font-style: italic;
-    margin: 20px 0;
     color: #555;
+    margin: 0;
+}
+
+.btn-small {
+    padding: 4px 8px;
+    font-size: 0.7rem;
+    background: #e5e5ea;
+    color: #333;
 }
 
 .hidden-faded {
