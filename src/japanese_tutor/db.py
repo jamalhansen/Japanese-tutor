@@ -39,8 +39,8 @@ class Database:
                     easiness_factor REAL DEFAULT 2.5,
                     interval_days INTEGER DEFAULT 0,
                     repetitions INTEGER DEFAULT 0,
-                    next_review_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    next_review_at TIMESTAMP,
+                    created_at TIMESTAMP,
                     last_reviewed_at TIMESTAMP,
                     consecutive_correct INTEGER DEFAULT 0,
                     romaji_visible BOOLEAN DEFAULT 1,
@@ -53,7 +53,7 @@ class Database:
                     id INTEGER PRIMARY KEY,
                     card_id INTEGER NOT NULL,
                     session_id INTEGER,
-                    reviewed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    reviewed_at TIMESTAMP,
                     rating INTEGER NOT NULL,
                     response_time_ms INTEGER,
                     romaji_visible BOOLEAN,
@@ -68,7 +68,7 @@ class Database:
                     character_id INTEGER NOT NULL,
                     body TEXT NOT NULL,
                     source TEXT,
-                    chosen_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    chosen_at TIMESTAMP,
                     internalized_at TIMESTAMP,
                     resurface_count INTEGER DEFAULT 0,
                     FOREIGN KEY (character_id) REFERENCES characters(id)
@@ -78,7 +78,7 @@ class Database:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS sessions (
                     id INTEGER PRIMARY KEY,
-                    started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    started_at TIMESTAMP,
                     ended_at TIMESTAMP,
                     stage TEXT,
                     cards_reviewed INTEGER DEFAULT 0,
@@ -92,7 +92,7 @@ class Database:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS tool_runs (
                     id INTEGER PRIMARY KEY,
-                    run_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    run_at TIMESTAMP,
                     provider TEXT,
                     model TEXT,
                     cards_reviewed INTEGER,
@@ -102,6 +102,7 @@ class Database:
             """)
 
     def populate_characters(self, characters_list: List[Dict[str, Any]]):
+        now_str = datetime.now().isoformat()
         with self._get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("SELECT COUNT(*) FROM characters")
@@ -111,12 +112,13 @@ class Database:
                         "INSERT INTO characters (stage, character, romaji, meaning) VALUES (?, ?, ?, ?)",
                         (char["stage"], char["char"], char["romaji"], char.get("meaning"))
                     )
-                conn.execute("""
-                    INSERT INTO cards (character_id)
-                    SELECT id FROM characters
+                conn.execute(f"""
+                    INSERT INTO cards (character_id, next_review_at, created_at)
+                    SELECT id, '{now_str}', '{now_str}' FROM characters
                 """)
 
     def get_due_cards(self, stage: Optional[str] = None, limit: int = 20) -> List[Dict[str, Any]]:
+        now_str = datetime.now().isoformat()
         with self._get_connection() as conn:
             query = """
                 SELECT c.id as card_id, ch.character, ch.romaji, ch.meaning, ch.stage,
@@ -126,9 +128,9 @@ class Database:
                 FROM cards c
                 JOIN characters ch ON c.character_id = ch.id
                 LEFT JOIN associations a ON a.character_id = ch.id
-                WHERE c.next_review_at <= CURRENT_TIMESTAMP
+                WHERE c.next_review_at <= ?
             """
-            params = []
+            params = [now_str]
             if stage:
                 query += " AND ch.stage = ?"
                 params.append(stage)
@@ -208,13 +210,14 @@ class Database:
 
     def is_stage_mastered(self, stage: str, threshold: float = 90.0) -> bool:
         """Check if 90% accuracy reached for all characters in a stage with no reviews due."""
+        now_str = datetime.now().isoformat()
         with self._get_connection() as conn:
             # Check if any cards in this stage are still due
             cursor = conn.execute("""
                 SELECT COUNT(*) FROM cards c
                 JOIN characters ch ON c.character_id = ch.id
-                WHERE ch.stage = ? AND c.next_review_at <= CURRENT_TIMESTAMP
-            """, (stage,))
+                WHERE ch.stage = ? AND c.next_review_at <= ?
+            """, (stage, now_str))
             if cursor.fetchone()[0] > 0:
                 return False
 
@@ -244,6 +247,7 @@ class Database:
             return dict(row) if row else {}
 
     def save_mnemonic(self, character_id: int, body: str, source: str = "manual"):
+        now_str = datetime.now().isoformat()
         with self._get_connection() as conn:
             # Check if association already exists
             cursor = conn.execute("SELECT id FROM associations WHERE character_id = ?", (character_id,))
@@ -252,11 +256,11 @@ class Database:
             if row:
                 conn.execute("""
                     UPDATE associations 
-                    SET body = ?, source = ?, chosen_at = CURRENT_TIMESTAMP 
+                    SET body = ?, source = ?, chosen_at = ? 
                     WHERE id = ?
-                """, (body, source, row["id"]))
+                """, (body, source, now_str, row["id"]))
             else:
                 conn.execute("""
-                    INSERT INTO associations (character_id, body, source)
-                    VALUES (?, ?, ?)
-                """, (character_id, body, source))
+                    INSERT INTO associations (character_id, body, source, chosen_at)
+                    VALUES (?, ?, ?, ?)
+                """, (character_id, body, source, now_str))
