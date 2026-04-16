@@ -117,7 +117,7 @@ class Database:
                     SELECT id, '{now_str}', '{now_str}' FROM characters
                 """)
 
-    def get_due_cards(self, stage: Optional[str] = None, limit: int = 20) -> List[Dict[str, Any]]:
+    def get_due_cards(self, stage: Optional[str] = None, limit: int = 20, practice: bool = False) -> List[Dict[str, Any]]:
         now_str = datetime.now().isoformat()
         with self._get_connection() as conn:
             query = """
@@ -128,14 +128,21 @@ class Database:
                 FROM cards c
                 JOIN characters ch ON c.character_id = ch.id
                 LEFT JOIN associations a ON a.character_id = ch.id
-                WHERE c.next_review_at <= ?
+                WHERE 1=1
             """
-            params = [now_str]
+            params = []
+            if not practice:
+                query += " AND c.next_review_at <= ?"
+                params.append(now_str)
+            
             if stage:
                 query += " AND ch.stage = ?"
                 params.append(stage)
             
-            query += " ORDER BY c.next_review_at LIMIT ?"
+            if practice:
+                query += " ORDER BY RANDOM() LIMIT ?"
+            else:
+                query += " ORDER BY c.next_review_at LIMIT ?"
             params.append(limit)
             
             cursor = conn.execute(query, params)

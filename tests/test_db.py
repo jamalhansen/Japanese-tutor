@@ -30,3 +30,20 @@ def test_romaji_fading(db):
     db.update_card(card_id, 0, 1, 0, 2.4)
     card = db.get_card(card_id)
     assert card["romaji_visible"] == 1
+
+def test_practice_mode(db):
+    chars = [{"char": "あ", "romaji": "a", "stage": "hiragana"}]
+    db.populate_characters(chars)
+    
+    # Manually update next_review_at to future
+    with db._get_connection() as conn:
+        conn.execute("UPDATE cards SET next_review_at = '2099-01-01T00:00:00'")
+    
+    # Not due
+    due = db.get_due_cards()
+    assert len(due) == 0
+    
+    # But available in practice mode
+    practice = db.get_due_cards(practice=True)
+    assert len(practice) == 1
+    assert practice[0]["character"] == "あ"

@@ -15,7 +15,7 @@ db: Optional[Database] = None
 llm_helper: Optional[LLMHelper] = None
 
 @app.get("/api/cards/due")
-def get_due_cards(stage: Optional[str] = None):
+def get_due_cards(stage: Optional[str] = None, practice: bool = False):
     if not db:
         raise HTTPException(status_code=500, detail="Database not initialized")
     
@@ -27,7 +27,7 @@ def get_due_cards(stage: Optional[str] = None):
         else:
             stage = "kanji"
             
-    return db.get_due_cards(stage=stage)
+    return db.get_due_cards(stage=stage, practice=practice)
 
 @app.post("/api/reviews")
 def submit_review(review: ReviewSubmission):

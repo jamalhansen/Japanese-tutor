@@ -20,6 +20,15 @@ def test_get_due_cards(mock_state):
     response = client.get("/api/cards/due")
     assert response.status_code == 200
     assert response.json() == [{"id": 1, "char": "あ"}]
+    api.db.get_due_cards.assert_called_with(stage="hiragana", practice=False)
+
+def test_get_due_cards_practice(mock_state):
+    api.db.is_stage_mastered.return_value = False
+    api.db.get_due_cards.return_value = [{"id": 1, "char": "あ"}]
+    
+    response = client.get("/api/cards/due?practice=true")
+    assert response.status_code == 200
+    api.db.get_due_cards.assert_called_with(stage="hiragana", practice=True)
 
 def test_submit_review(mock_state):
     api.db.get_card.return_value = {

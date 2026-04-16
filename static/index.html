@@ -20,32 +20,43 @@
         </header>
 
         <main id="study-view" class="view">
-            <!-- study view content remains same -->
-            <div id="card" class="card">
-                <div class="card-front">
-                    <div id="char-display"></div>
-                    <div id="stage-badge"></div>
-                </div>
-                <div class="card-back hidden">
-                    <div id="romaji-display"></div>
-                    <div class="mnemonic-section">
-                        <div id="mnemonic-display"></div>
-                        <button id="edit-mnemonic" class="btn-small">Edit</button>
-                    </div>
-                    <div id="example-display" class="example-text"></div>
-                    <button id="generate-mnemonic">Help me remember this</button>
-                    <div id="mnemonic-suggestions"></div>
+            <div id="session-summary" class="hidden">
+                <h2 id="summary-title">Goal Reached! 🎊</h2>
+                <div id="summary-content"></div>
+                <div class="summary-actions">
+                    <button id="keep-learning" class="btn-primary">Keep Learning</button>
+                    <button id="start-practice" class="btn-primary hidden">Practice More</button>
+                    <button onclick="showView('progress')" class="btn-secondary">View Progress</button>
                 </div>
             </div>
 
-            <div id="controls" class="hidden">
-                <button onclick="submitReview(0)" class="btn-again">Again</button>
-                <button onclick="submitReview(3)" class="btn-hard">Hard</button>
-                <button onclick="submitReview(4)" class="btn-good">Good</button>
-                <button onclick="submitReview(5)" class="btn-easy">Easy</button>
+            <div id="card-container">
+                <div id="card" class="card">
+                    <div class="card-front">
+                        <div id="char-display"></div>
+                        <div id="stage-badge"></div>
+                    </div>
+                    <div class="card-back hidden">
+                        <div id="romaji-display"></div>
+                        <div class="mnemonic-section">
+                            <div id="mnemonic-display"></div>
+                            <button id="edit-mnemonic" class="btn-small">Edit</button>
+                        </div>
+                        <div id="example-display" class="example-text"></div>
+                        <button id="generate-mnemonic">Help me remember this</button>
+                        <div id="mnemonic-suggestions"></div>
+                    </div>
+                </div>
+
+                <div id="controls" class="hidden">
+                    <button onclick="submitReview(0)" class="btn-again">Again</button>
+                    <button onclick="submitReview(3)" class="btn-hard">Hard</button>
+                    <button onclick="submitReview(4)" class="btn-good">Good</button>
+                    <button onclick="submitReview(5)" class="btn-easy">Easy</button>
+                </div>
+
+                <button id="show-answer">Show Answer</button>
             </div>
-            
-            <button id="show-answer">Show Answer</button>
         </main>
 
         <main id="progress-view" class="view hidden">

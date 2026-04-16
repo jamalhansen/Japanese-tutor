@@ -1,36 +1,80 @@
 let currentCard = null;
 let dueCards = [];
+let batchSize = 0;
+let isPracticeMode = false;
 let sessionMissed = [];
 let sessionCorrect = [];
 
-async function fetchDueCards() {
-    const response = await fetch('/api/cards/due');
+async function fetchDueCards(practice = false) {
+    isPracticeMode = practice;
+    const url = practice ? '/api/cards/due?practice=true' : '/api/cards/due';
+    const response = await fetch(url);
     dueCards = await response.json();
-    document.getElementById('due-count').innerText = `Due: ${dueCards.length}`;
+    batchSize = dueCards.length;
+    document.getElementById('due-count').innerText = practice ? "Practice Mode" : `Due: ${dueCards.length}`;
     if (dueCards.length > 0) {
+        document.getElementById('session-summary').classList.add('hidden');
+        document.getElementById('card-container').classList.remove('hidden');
         showNextCard();
     } else {
-        showSessionSummary();
+        showSessionSummary(true);
     }
 }
 
-async function showSessionSummary() {
-    document.getElementById('char-display').innerText = "All done! 🎉";
-    document.getElementById('show-answer').classList.add('hidden');
-    document.querySelector('.card-back').classList.add('hidden');
-    document.getElementById('controls').classList.add('hidden');
+async function showSessionSummary(trulyAllDone = false) {
+    document.getElementById('card-container').classList.add('hidden');
+    document.getElementById('session-summary').classList.remove('hidden');
     
+    const title = document.getElementById('summary-title');
+    const content = document.getElementById('summary-content');
+    const keepGoing = document.getElementById('keep-learning');
+    const practiceMore = document.getElementById('start-practice');
+    
+    content.innerHTML = "";
+    
+    // If we finished a batch that was smaller than the limit (20), 
+    // it means we've exhausted all due cards.
+    if (trulyAllDone || batchSize < 20) {
+        title.innerText = isPracticeMode ? "Practice Session Done!" : "All caught up! 🎉";
+        content.innerText = isPracticeMode 
+            ? "You've finished your extra practice session." 
+            : "You've finished all your reviews for now.";
+        keepGoing.classList.add('hidden');
+        practiceMore.classList.remove('hidden');
+    } else {
+        title.innerText = isPracticeMode ? "Practice Goal Reached! 🎊" : "Goal Reached! 🎊";
+        content.innerText = isPracticeMode 
+            ? "You've finished your practice batch." 
+            : "Great job hitting your review goal for this session.";
+        keepGoing.classList.remove('hidden');
+        practiceMore.classList.add('hidden');
+    }
+    // ... rest of debrief logic ...
+
+
     if (sessionMissed.length > 0) {
-        document.getElementById('example-display').innerText = "Analyzing your session...";
+        const debriefArea = document.createElement('div');
+        debriefArea.className = "debrief-area";
+        debriefArea.innerText = "Analyzing your session...";
+        content.appendChild(debriefArea);
+        
         const debriefRes = await fetch('/api/session/debrief', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ missed: sessionMissed, recurring: [] })
         });
         const data = await debriefRes.json();
-        document.getElementById('example-display').innerText = data.debrief;
+        debriefArea.innerText = data.debrief;
     }
 }
+
+document.getElementById('keep-learning').onclick = () => {
+    fetchDueCards(isPracticeMode);
+};
+
+document.getElementById('start-practice').onclick = () => {
+    fetchDueCards(true);
+};
 
 function showNextCard() {
     currentCard = dueCards[0];
@@ -97,7 +141,7 @@ async function submitReview(rating) {
     if (dueCards.length > 0) {
         showNextCard();
     } else {
-        showSessionSummary();
+        showSessionSummary(false);
     }
 }
 

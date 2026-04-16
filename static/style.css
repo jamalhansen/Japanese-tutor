@@ -129,6 +129,51 @@ button {
     background-color: #eee;
 }
 
+#session-summary {
+    background: white;
+    border-radius: 12px;
+    padding: 40px;
+    text-align: center;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+}
+
+#summary-title {
+    font-size: 2rem;
+    margin-bottom: 20px;
+}
+
+#summary-content {
+    margin-bottom: 30px;
+    color: #555;
+    line-height: 1.6;
+}
+
+.summary-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.btn-primary {
+    background-color: #007aff;
+    color: white;
+}
+
+.btn-secondary {
+    background-color: #e5e5ea;
+    color: #333;
+}
+
+.debrief-area {
+    margin-top: 25px;
+    padding: 15px;
+    background-color: #f0f7ff;
+    border-radius: 8px;
+    text-align: left;
+    font-size: 0.95rem;
+    border-left: 4px solid #007aff;
+}
+
 nav {
     display: flex;
     gap: 15px;
