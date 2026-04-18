@@ -1,5 +1,5 @@
 from typing import List, Literal, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 class VocabularyCard(BaseModel):
     kanji: str = Field(..., description="The word in Kanji/Kana.")
@@ -27,9 +27,15 @@ class ReviewResult(BaseModel):
     word_count: int = Field(..., description="Approximate word count of extracted text.")
     summary: str = Field(..., description="2-3 sentence verdict on the extraction.")
 
+class SessionStartRequest(BaseModel):
+    stage: Optional[str] = None
+    provider: Optional[str] = None
+    model: Optional[str] = None
+
 class ReviewSubmission(BaseModel):
     card_id: int
-    rating: int
+    rating: int = Field(..., ge=0, le=5)
+    session_id: Optional[int] = None
 
 class MnemonicRequest(BaseModel):
     character: str

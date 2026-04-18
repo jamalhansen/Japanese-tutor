@@ -101,6 +101,12 @@ class Database:
                 )
             """)
 
+            # Enforce one association per character (idempotent)
+            conn.execute("""
+                CREATE UNIQUE INDEX IF NOT EXISTS idx_associations_character_id
+                ON associations(character_id)
+            """)
+
     def populate_characters(self, characters_list: List[Dict[str, Any]]):
         now_str = datetime.now().isoformat()
         with self._get_connection() as conn:
@@ -112,10 +118,10 @@ class Database:
                         "INSERT INTO characters (stage, character, romaji, meaning) VALUES (?, ?, ?, ?)",
                         (char["stage"], char["char"], char["romaji"], char.get("meaning"))
                     )
-                conn.execute(f"""
+                conn.execute("""
                     INSERT INTO cards (character_id, next_review_at, created_at)
-                    SELECT id, '{now_str}', '{now_str}' FROM characters
-                """)
+                    SELECT id, ?, ? FROM characters
+                """, (now_str, now_str))
 
     def get_due_cards(self, stage: Optional[str] = None, limit: int = 20, practice: bool = False) -> List[Dict[str, Any]]:
         now_str = datetime.now().isoformat()
@@ -148,7 +154,7 @@ class Database:
             cursor = conn.execute(query, params)
             return [dict(row) for row in cursor.fetchall()]
 
-    def update_card(self, card_id: int, rating: int, next_interval: int, next_repetitions: int, next_ef: float):
+    def update_card(self, card_id: int, rating: int, next_interval: int, next_repetitions: int, next_ef: float, session_id: Optional[int] = None):
         now = datetime.now()
         next_review = now + timedelta(days=next_interval)
         
@@ -183,9 +189,9 @@ class Database:
             """, (next_ef, next_interval, next_repetitions, next_review_str, now_str, consecutive, visible, card_id))
             
             conn.execute("""
-                INSERT INTO reviews (card_id, rating, reviewed_at)
-                VALUES (?, ?, ?)
-            """, (card_id, rating, now_str))
+                INSERT INTO reviews (card_id, rating, reviewed_at, session_id)
+                VALUES (?, ?, ?, ?)
+            """, (card_id, rating, now_str, session_id))
 
     def get_mastery_stats(self, stage: Optional[str] = None) -> List[Dict[str, Any]]:
         with self._get_connection() as conn:
@@ -256,18 +262,86 @@ class Database:
     def save_mnemonic(self, character_id: int, body: str, source: str = "manual"):
         now_str = datetime.now().isoformat()
         with self._get_connection() as conn:
-            # Check if association already exists
-            cursor = conn.execute("SELECT id FROM associations WHERE character_id = ?", (character_id,))
+            conn.execute("""
+                INSERT INTO associations (character_id, body, source, chosen_at)
+                VALUES (?, ?, ?, ?)
+                ON CONFLICT(character_id) DO UPDATE SET
+                    body = excluded.body,
+                    source = excluded.source,
+                    chosen_at = excluded.chosen_at
+            """, (character_id, body, source, now_str))
+
+    # --- Session management ---
+
+    def start_session(self, stage: Optional[str] = None, provider: Optional[str] = None, model: Optional[str] = None) -> int:
+        """Create a new session record. Returns session_id."""
+        now_str = datetime.now().isoformat()
+        with self._get_connection() as conn:
+            cursor = conn.execute("""
+                INSERT INTO sessions (started_at, stage, cards_reviewed, correct_count, again_count, provider, model)
+                VALUES (?, ?, 0, 0, 0, ?, ?)
+            """, (now_str, stage, provider, model))
+            return cursor.lastrowid
+
+    def end_session(self, session_id: int) -> None:
+        """Mark a session as ended."""
+        now_str = datetime.now().isoformat()
+        with self._get_connection() as conn:
+            conn.execute("""
+                UPDATE sessions SET ended_at = ? WHERE id = ?
+            """, (now_str, session_id))
+
+    def update_session_stats(self, session_id: int, rating: int) -> None:
+        """Increment session counters based on a review rating."""
+        with self._get_connection() as conn:
+            conn.execute("""
+                UPDATE sessions
+                SET cards_reviewed = cards_reviewed + 1,
+                    correct_count = correct_count + CASE WHEN ? >= 3 THEN 1 ELSE 0 END,
+                    again_count = again_count + CASE WHEN ? < 3 THEN 1 ELSE 0 END
+                WHERE id = ?
+            """, (rating, rating, session_id))
+
+    def get_sessions(self, limit: int = 20) -> List[Dict[str, Any]]:
+        """Return recent sessions, most recent first."""
+        with self._get_connection() as conn:
+            cursor = conn.execute("""
+                SELECT id, started_at, ended_at, stage,
+                       cards_reviewed, correct_count, again_count,
+                       provider, model,
+                       ROUND(CASE WHEN cards_reviewed > 0
+                             THEN correct_count * 100.0 / cards_reviewed
+                             ELSE 0 END, 1) as accuracy_pct
+                FROM sessions
+                ORDER BY started_at DESC
+                LIMIT ?
+            """, (limit,))
+            return [dict(row) for row in cursor.fetchall()]
+
+    def get_session(self, session_id: int) -> Optional[Dict[str, Any]]:
+        """Return a single session with its per-character review list."""
+        with self._get_connection() as conn:
+            cursor = conn.execute("""
+                SELECT id, started_at, ended_at, stage,
+                       cards_reviewed, correct_count, again_count,
+                       provider, model,
+                       ROUND(CASE WHEN cards_reviewed > 0
+                             THEN correct_count * 100.0 / cards_reviewed
+                             ELSE 0 END, 1) as accuracy_pct
+                FROM sessions WHERE id = ?
+            """, (session_id,))
             row = cursor.fetchone()
-            
-            if row:
-                conn.execute("""
-                    UPDATE associations 
-                    SET body = ?, source = ?, chosen_at = ? 
-                    WHERE id = ?
-                """, (body, source, now_str, row["id"]))
-            else:
-                conn.execute("""
-                    INSERT INTO associations (character_id, body, source, chosen_at)
-                    VALUES (?, ?, ?, ?)
-                """, (character_id, body, source, now_str))
+            if not row:
+                return None
+            session = dict(row)
+            cursor = conn.execute("""
+                SELECT r.id, r.reviewed_at, r.rating, r.romaji_visible,
+                       ch.character, ch.romaji, ch.stage
+                FROM reviews r
+                JOIN cards c ON r.card_id = c.id
+                JOIN characters ch ON c.character_id = ch.id
+                WHERE r.session_id = ?
+                ORDER BY r.reviewed_at
+            """, (session_id,))
+            session["reviews"] = [dict(row) for row in cursor.fetchall()]
+            return session

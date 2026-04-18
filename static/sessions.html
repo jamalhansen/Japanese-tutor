@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sessions — Japanese Tutor</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #e5e5e5; }
+        th { background: #f5f5f7; font-weight: 600; font-size: 0.85rem; color: #666; text-transform: uppercase; letter-spacing: 0.05em; }
+        tr.clickable:hover { background: #f0f0f5; cursor: pointer; }
+        .accuracy-high { color: #34c759; font-weight: 600; }
+        .accuracy-mid { color: #ff9500; font-weight: 600; }
+        .accuracy-low { color: #ff3b30; font-weight: 600; }
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.8rem; background: #e8e8ed; color: #555; }
+        #detail-panel { display: none; margin-top: 24px; }
+        #detail-panel h3 { margin-bottom: 12px; }
+        .empty-state { text-align: center; padding: 60px 20px; color: #999; }
+        .back-link { display: inline-block; margin-bottom: 20px; color: #007aff; text-decoration: none; font-size: 0.9rem; }
+        .back-link:hover { text-decoration: underline; }
+        .section-card { background: white; border-radius: 12px; padding: 24px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); margin-bottom: 16px; }
+        .stat-row { display: flex; gap: 24px; margin-bottom: 12px; flex-wrap: wrap; }
+        .stat { display: flex; flex-direction: column; }
+        .stat-label { font-size: 0.75rem; color: #999; text-transform: uppercase; letter-spacing: 0.04em; }
+        .stat-value { font-size: 1.4rem; font-weight: 700; }
+    </style>
+</head>
+<body>
+<div id="app">
+    <header>
+        <h1>Japanese Tutor</h1>
+        <nav>
+            <button onclick="window.location.href='index.html'">Study</button>
+            <button onclick="window.location.href='index.html#progress'">Progress</button>
+            <button style="font-weight:600">Sessions</button>
+        </nav>
+    </header>
+
+    <a href="index.html" class="back-link">← Back to Study</a>
+
+    <div class="section-card">
+        <h2 style="margin-top:0">Study Sessions</h2>
+        <div id="sessions-container">
+            <p style="color:#999">Loading…</p>
+        </div>
+    </div>
+
+    <div id="detail-panel" class="section-card">
+        <h3 id="detail-title">Session Detail</h3>
+        <div class="stat-row" id="detail-stats"></div>
+        <h4 style="margin-bottom:8px">Reviews</h4>
+        <div id="detail-reviews"></div>
+    </div>
+</div>
+
+<script>
+const API = '';
+
+function accuracyClass(pct) {
+    if (pct === null || pct === undefined) return '';
+    if (pct >= 80) return 'accuracy-high';
+    if (pct >= 60) return 'accuracy-mid';
+    return 'accuracy-low';
+}
+
+function fmt(ts) {
+    if (!ts) return '—';
+    const d = new Date(ts);
+    return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+}
+
+function duration(started, ended) {
+    if (!started || !ended) return '—';
+    const ms = new Date(ended) - new Date(started);
+    const m = Math.round(ms / 60000);
+    return m < 1 ? '<1 min' : m + ' min';
+}
+
+async function loadSessions() {
+    const container = document.getElementById('sessions-container');
+    try {
+        const res = await fetch(`${API}/api/sessions?limit=50`);
+        const sessions = await res.json();
+
+        if (!sessions.length) {
+            container.innerHTML = `<div class="empty-state">
+                <p>No sessions recorded yet.</p>
+                <p style="font-size:0.9rem">Start studying to create your first session.</p>
+            </div>`;
+            return;
+        }
+
+        const rows = sessions.map(s => `
+            <tr class="clickable" onclick="loadDetail(${s.id})">
+                <td>${fmt(s.started_at)}</td>
+                <td><span class="badge">${s.stage || '—'}</span></td>
+                <td>${s.cards_reviewed}</td>
+                <td class="${accuracyClass(s.accuracy_pct)}">${s.accuracy_pct !== null ? s.accuracy_pct + '%' : '—'}</td>
+                <td>${duration(s.started_at, s.ended_at)}</td>
+            </tr>
+        `).join('');
+
+        container.innerHTML = `
+            <table>
+                <thead><tr>
+                    <th>Date</th><th>Stage</th><th>Cards</th><th>Accuracy</th><th>Duration</th>
+                </tr></thead>
+                <tbody>${rows}</tbody>
+            </table>`;
+    } catch (err) {
+        container.innerHTML = `<p style="color:#ff3b30">Error loading sessions: ${err.message}</p>`;
+    }
+}
+
+async function loadDetail(sessionId) {
+    const panel = document.getElementById('detail-panel');
+    const title = document.getElementById('detail-title');
+    const statsEl = document.getElementById('detail-stats');
+    const reviewsEl = document.getElementById('detail-reviews');
+
+    panel.style.display = 'block';
+    title.textContent = 'Loading…';
+    statsEl.innerHTML = '';
+    reviewsEl.innerHTML = '';
+
+    try {
+        const res = await fetch(`${API}/api/sessions/${sessionId}`);
+        if (!res.ok) { title.textContent = 'Session not found'; return; }
+        const s = await res.json();
+
+        title.textContent = `Session — ${fmt(s.started_at)}`;
+        statsEl.innerHTML = `
+            <div class="stat"><span class="stat-label">Stage</span><span class="stat-value">${s.stage || '—'}</span></div>
+            <div class="stat"><span class="stat-label">Cards</span><span class="stat-value">${s.cards_reviewed}</span></div>
+            <div class="stat"><span class="stat-label">Correct</span><span class="stat-value accuracy-high">${s.correct_count}</span></div>
+            <div class="stat"><span class="stat-label">Again</span><span class="stat-value accuracy-low">${s.again_count}</span></div>
+            <div class="stat"><span class="stat-label">Accuracy</span><span class="stat-value ${accuracyClass(s.accuracy_pct)}">${s.accuracy_pct !== null ? s.accuracy_pct + '%' : '—'}</span></div>
+            <div class="stat"><span class="stat-label">Duration</span><span class="stat-value">${duration(s.started_at, s.ended_at)}</span></div>
+        `;
+
+        if (!s.reviews || !s.reviews.length) {
+            reviewsEl.innerHTML = '<p style="color:#999">No review detail available for this session.</p>';
+            return;
+        }
+
+        const reviewRows = s.reviews.map(r => {
+            const label = r.rating >= 3
+                ? `<span style="color:#34c759">✓ ${['','','','Hard','Good','Easy'][r.rating] || r.rating}</span>`
+                : `<span style="color:#ff3b30">✗ Again</span>`;
+            return `<tr>
+                <td style="font-size:1.4rem">${r.character}</td>
+                <td>${r.romaji}</td>
+                <td><span class="badge">${r.stage}</span></td>
+                <td>${label}</td>
+                <td style="font-size:0.8rem;color:#999">${fmt(r.reviewed_at)}</td>
+            </tr>`;
+        }).join('');
+
+        reviewsEl.innerHTML = `
+            <table>
+                <thead><tr><th>Char</th><th>Romaji</th><th>Stage</th><th>Result</th><th>Time</th></tr></thead>
+                <tbody>${reviewRows}</tbody>
+            </table>`;
+        panel.scrollIntoView({behavior:'smooth'});
+    } catch (err) {
+        title.textContent = `Error: ${err.message}`;
+    }
+}
+
+loadSessions();
+</script>
+</body>
+</html>

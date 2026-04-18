@@ -57,3 +57,61 @@ def test_mnemonics(mock_state):
     response = client.post("/api/mnemonics/generate", json={"character": "あ", "romaji": "a"})
     assert response.status_code == 200
     assert response.json() == {"suggestions": ["Mnemonic 1"]}
+
+
+# --- Rating validation ---
+
+def test_submit_review_invalid_rating_too_high(mock_state):
+    response = client.post("/api/reviews", json={"card_id": 1, "rating": 6})
+    assert response.status_code == 422
+
+
+def test_submit_review_invalid_rating_negative(mock_state):
+    response = client.post("/api/reviews", json={"card_id": 1, "rating": -1})
+    assert response.status_code == 422
+
+
+# --- Session endpoints ---
+
+def test_start_session(mock_state):
+    api.db.start_session.return_value = 42
+    response = client.post("/api/session/start", json={"stage": "hiragana"})
+    assert response.status_code == 200
+    assert response.json() == {"session_id": 42}
+    api.db.start_session.assert_called_once_with(stage="hiragana", provider=None, model=None)
+
+
+def test_end_session(mock_state):
+    response = client.post("/api/session/end/42")
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+    api.db.end_session.assert_called_once_with(42)
+
+
+def test_get_sessions(mock_state):
+    api.db.get_sessions.return_value = [{"id": 1, "cards_reviewed": 5}]
+    response = client.get("/api/sessions")
+    assert response.status_code == 200
+    assert response.json()[0]["id"] == 1
+
+
+def test_get_session_detail(mock_state):
+    api.db.get_session.return_value = {"id": 1, "cards_reviewed": 5, "reviews": []}
+    response = client.get("/api/sessions/1")
+    assert response.status_code == 200
+    assert response.json()["id"] == 1
+
+
+def test_get_session_not_found(mock_state):
+    api.db.get_session.return_value = None
+    response = client.get("/api/sessions/9999")
+    assert response.status_code == 404
+
+
+def test_submit_review_updates_session(mock_state):
+    api.db.get_card.return_value = {
+        "id": 1, "repetitions": 0, "interval_days": 0, "easiness_factor": 2.5
+    }
+    response = client.post("/api/reviews", json={"card_id": 1, "rating": 4, "session_id": 7})
+    assert response.status_code == 200
+    api.db.update_session_stats.assert_called_once_with(7, 4)

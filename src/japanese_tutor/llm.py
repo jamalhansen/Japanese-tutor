@@ -1,5 +1,5 @@
 from typing import List
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError as PydanticValidationError
 from local_first_common.providers.base import BaseProvider
 from local_first_common.tracking import timed_run
 
@@ -31,7 +31,12 @@ class LLMHelper:
                 user=user,
                 response_model=MnemonicList
             )
-            result = MnemonicList.model_validate(raw_result)
+            try:
+                result = MnemonicList.model_validate(raw_result)
+            except PydanticValidationError as e:
+                raise RuntimeError(
+                    f"LLM returned unexpected format for mnemonics: {e}"
+                ) from e
             _run.item_count = len(result.suggestions)
             return [s.body for s in result.suggestions]
 

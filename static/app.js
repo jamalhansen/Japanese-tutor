@@ -4,6 +4,7 @@ let batchSize = 0;
 let isPracticeMode = false;
 let sessionMissed = [];
 let sessionCorrect = [];
+let currentSessionId = null;
 
 async function fetchDueCards(practice = false) {
     isPracticeMode = practice;
@@ -12,9 +13,24 @@ async function fetchDueCards(practice = false) {
     dueCards = await response.json();
     batchSize = dueCards.length;
     document.getElementById('due-count').innerText = practice ? "Practice Mode" : `Due: ${dueCards.length}`;
+    
     if (dueCards.length > 0) {
         document.getElementById('session-summary').classList.add('hidden');
         document.getElementById('card-container').classList.remove('hidden');
+        
+        // Start a new session if one isn't already active
+        if (!currentSessionId) {
+            sessionMissed = [];
+            sessionCorrect = [];
+            const sessionRes = await fetch('/api/session/start', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ stage: practice ? 'practice' : dueCards[0].stage })
+            });
+            const sessionData = await sessionRes.json();
+            currentSessionId = sessionData.session_id;
+        }
+        
         showNextCard();
     } else {
         showSessionSummary(true);
@@ -24,6 +40,12 @@ async function fetchDueCards(practice = false) {
 async function showSessionSummary(trulyAllDone = false) {
     document.getElementById('card-container').classList.add('hidden');
     document.getElementById('session-summary').classList.remove('hidden');
+    
+    // End the session if one is active
+    if (currentSessionId) {
+        await fetch(`/api/session/end/${currentSessionId}`, { method: 'POST' });
+        currentSessionId = null;
+    }
     
     const title = document.getElementById('summary-title');
     const content = document.getElementById('summary-content');
@@ -132,7 +154,11 @@ async function submitReview(rating) {
     await fetch('/api/reviews', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ card_id: currentCard.card_id, rating })
+        body: JSON.stringify({ 
+            card_id: currentCard.card_id, 
+            rating,
+            session_id: currentSessionId
+        })
     });
     
     dueCards.shift();
@@ -224,4 +250,10 @@ async function renderProgress() {
 }
 
 // Start
-fetchDueCards();
+const hash = window.location.hash.substring(1);
+if (hash === 'progress') {
+    showView('progress');
+} else {
+    fetchDueCards();
+}
+
