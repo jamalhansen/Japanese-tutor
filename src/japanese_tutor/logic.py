@@ -1,8 +1,8 @@
 from pathlib import Path
+import os
 from typing import Annotated, Optional
 
 import typer
-import uvicorn
 
 from local_first_common.providers import PROVIDERS
 from local_first_common.cli import (
@@ -16,8 +16,8 @@ from local_first_common.cli import (
     resolve_dry_run,
     init_config_option,
 )
-from local_first_common.tracking import register_tool
 from local_first_common.config import get_setting
+from local_first_common.tracking import register_tool
 
 from . import api
 from .characters import HIRAGANA, KATAKANA
@@ -25,27 +25,26 @@ from .db import Database
 from .llm import LLMHelper
 
 TOOL_NAME = "japanese-tutor"
-_TOOL = register_tool(TOOL_NAME)
-
-app = typer.Typer(help="Japanese Tutor SRS application.")
-
 DEFAULTS = {
     "provider": "ollama",
     "model": "llama3",
     "port": 8421,
 }
+_TOOL = register_tool(TOOL_NAME)
+
+app = typer.Typer(help="Japanese Tutor SRS application.")
 
 @app.command()
 def run(
-    port: Annotated[Optional[int], typer.Option(help="Server port")] = None,
-    db_path: Annotated[Optional[Path], typer.Option(help="Custom SQLite DB path")] = None,
-    provider: Annotated[Optional[str], provider_option()] = None,
+    port: Optional[int] = typer.Option(None, help="Server port"),
+    db_path: Optional[Path] = typer.Option(None, help="Custom SQLite DB path"),
+    provider: Annotated[str, provider_option()] = os.environ.get("MODEL_PROVIDER", "ollama"),
     model: Annotated[Optional[str], model_option()] = None,
-    dry_run: bool = dry_run_option(),
-    no_llm: bool = no_llm_option(),
-    verbose: bool = verbose_option(),
-    debug: bool = debug_option(),
-    init_config: bool = init_config_option(TOOL_NAME, DEFAULTS),
+    dry_run: Annotated[bool, dry_run_option()] = False,
+    no_llm: Annotated[bool, no_llm_option()] = False,
+    verbose: Annotated[bool, verbose_option()] = False,
+    debug: Annotated[bool, debug_option()] = False,
+    init_config: Annotated[bool, init_config_option(TOOL_NAME, DEFAULTS)] = False,
 ):
     """Start the Japanese Tutor SRS server."""
     

@@ -18,7 +18,7 @@ def test_run_command(mock_db, mock_resolve, mock_mount, mock_uvicorn, tmp_path):
     result = runner.invoke(app, ["--dry-run", "--no-llm", "--db-path", str(tmp_path / "test.db")])
     
     assert result.exit_code == 0
-    assert "Starting server at http://localhost:8421" in result.stdout
+    assert "Starting Japanese Tutor at http://localhost:8421" in result.stdout
     mock_uvicorn.assert_called_once()
     mock_db.assert_called_once()
     mock_mount.assert_called_once()

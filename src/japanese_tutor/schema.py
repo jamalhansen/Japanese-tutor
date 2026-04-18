@@ -1,5 +1,5 @@
 from typing import List, Literal, Optional
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 
 class VocabularyCard(BaseModel):
     kanji: str = Field(..., description="The word in Kanji/Kana.")

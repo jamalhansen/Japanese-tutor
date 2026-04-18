@@ -160,3 +160,9 @@ def mount_static(pkg_root: Path):
         static_path = pkg_root.parent / "static"
         if static_path.exists():
             app.mount("/", StaticFiles(directory=str(static_path), html=True), name="static")
+
+def start_server(port: int, pkg_root: Path):
+    """Entry point for starting the FastAPI server."""
+    import uvicorn
+    mount_static(pkg_root)
+    uvicorn.run(app, host="0.0.0.0", port=port)
