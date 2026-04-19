@@ -6,13 +6,25 @@ from pathlib import Path
 from .db import Database
 from .llm import LLMHelper
 from .srs import SM2
-from .schema import ReviewSubmission, MnemonicRequest, DebriefRequest, MnemonicSaveRequest, SessionStartRequest
+from .schema import (
+    ReviewSubmission,
+    MnemonicRequest,
+    DebriefRequest,
+    MnemonicSaveRequest,
+    SessionStartRequest,
+)
+
+
+class TutorDBError(Exception):
+    """Raised when a tutor database operation fails."""
+
 
 app = FastAPI(title="Japanese Tutor")
 
 # Global state to be initialized by CLI
 db: Optional[Database] = None
 llm_helper: Optional[LLMHelper] = None
+
 
 @app.get("/api/cards/due")
 def get_due_cards(stage: Optional[str] = None, practice: bool = False):
@@ -30,6 +42,7 @@ def get_due_cards(stage: Optional[str] = None, practice: bool = False):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Database error: {e}")
 
+
 @app.post("/api/reviews")
 def submit_review(review: ReviewSubmission):
     if not db:
@@ -43,7 +56,7 @@ def submit_review(review: ReviewSubmission):
             rating=review.rating,
             repetitions=card["repetitions"],
             interval=card["interval_days"],
-            easiness_factor=card["easiness_factor"]
+            easiness_factor=card["easiness_factor"],
         )
 
         db.update_card(
@@ -64,11 +77,13 @@ def submit_review(review: ReviewSubmission):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error: {e}")
 
+
 @app.get("/api/mastery")
 def get_mastery(stage: Optional[str] = None):
     if not db:
         raise HTTPException(status_code=500, detail="Database not initialized")
     return db.get_mastery_stats(stage=stage)
+
 
 @app.get("/api/example/{character}")
 def get_example(character: str):
@@ -78,12 +93,15 @@ def get_example(character: str):
     example = llm_helper.generate_adaptive_example(character, mastered)
     return {"example": example}
 
+
 @app.post("/api/session/start")
 def start_session(req: SessionStartRequest):
     if not db:
         raise HTTPException(status_code=500, detail="Database not initialized")
     try:
-        session_id = db.start_session(stage=req.stage, provider=req.provider, model=req.model)
+        session_id = db.start_session(
+            stage=req.stage, provider=req.provider, model=req.model
+        )
         return {"session_id": session_id}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Database error: {e}")
@@ -132,6 +150,7 @@ def post_debrief(req: DebriefRequest):
     debrief = llm_helper.generate_session_debrief(req.missed, req.recurring)
     return {"debrief": debrief}
 
+
 @app.post("/api/mnemonics/generate")
 def generate_mnemonics(req: MnemonicRequest):
     if not llm_helper:
@@ -139,30 +158,38 @@ def generate_mnemonics(req: MnemonicRequest):
     suggestions = llm_helper.generate_mnemonics(req.character, req.romaji)
     return {"suggestions": suggestions}
 
+
 @app.post("/api/mnemonics/save")
 def save_mnemonic(req: MnemonicSaveRequest):
     if not db:
         raise HTTPException(status_code=500, detail="Database not initialized")
-    
+
     card = db.get_card(req.card_id)
     if not card:
         raise HTTPException(status_code=404, detail="Card not found")
-        
+
     db.save_mnemonic(card["character_id"], req.body, req.source)
     return {"status": "ok"}
+
 
 def mount_static(pkg_root: Path):
     static_path = pkg_root / "static"
     if static_path.exists():
-        app.mount("/", StaticFiles(directory=str(static_path), html=True), name="static")
+        app.mount(
+            "/", StaticFiles(directory=str(static_path), html=True), name="static"
+        )
     else:
         # Fallback for development if static is one level up from src/japanese_tutor
         static_path = pkg_root.parent / "static"
         if static_path.exists():
-            app.mount("/", StaticFiles(directory=str(static_path), html=True), name="static")
+            app.mount(
+                "/", StaticFiles(directory=str(static_path), html=True), name="static"
+            )
+
 
 def start_server(port: int, pkg_root: Path):
     """Entry point for starting the FastAPI server."""
     import uvicorn
+
     mount_static(pkg_root)
     uvicorn.run(app, host="0.0.0.0", port=port)
