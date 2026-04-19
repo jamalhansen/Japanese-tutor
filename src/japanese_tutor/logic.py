@@ -13,7 +13,6 @@ from local_first_common.cli import (
     verbose_option,
     debug_option,
     resolve_provider,
-    resolve_dry_run,
     init_config_option,
 )
 from local_first_common.config import get_setting
@@ -66,7 +65,6 @@ def run(
         TOOL_NAME, "provider", cli_val=provider, default="ollama"
     )
     actual_model = get_setting(TOOL_NAME, "model", cli_val=model)
-    actual_dry_run = resolve_dry_run(dry_run, no_llm)
 
     # 2. Initialize database
     api.db = Database(db_path)
@@ -77,7 +75,7 @@ def run(
         llm = resolve_provider(
             PROVIDERS, actual_provider, actual_model, debug=debug, no_llm=no_llm
         )
-        api.llm = LLMHelper(llm, actual_dry_run)
+        api.llm_helper = LLMHelper(llm)
     except ProviderSetupError as e:
         print(f"Error initializing LLM: {e}")
         if not no_llm:
