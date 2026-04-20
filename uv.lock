@@ -537,6 +537,7 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "local-first-common" },
     { name = "pytest" },
     { name = "pytest-cov" },
 ]
@@ -556,6 +557,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "local-first-common", git = "https://github.com/jamalhansen/local-first-common.git?branch=main" },
     { name = "pytest", specifier = ">=9.0.2" },
     { name = "pytest-cov", specifier = ">=7.0.0" },
 ]
@@ -653,7 +655,7 @@ wheels = [
 [[package]]
 name = "local-first-common"
 version = "0.1.0"
-source = { git = "https://github.com/jamalhansen/local-first-common.git?branch=main#53ba533fd4b9003fad623f5c71083dfcd07a00fe" }
+source = { git = "https://github.com/jamalhansen/local-first-common.git?branch=main#e00c736c5a2c48f04091ba6da843c79326d3f054" }
 dependencies = [
     { name = "beautifulsoup4" },
     { name = "duckdb" },
