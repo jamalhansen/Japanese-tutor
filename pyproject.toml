@@ -23,8 +23,15 @@ japanese-tutor = "japanese_tutor.logic:app"
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[tool.hatch.build.targets.wheel]
+packages = ["src/japanese_tutor"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"static" = "src/japanese_tutor/static"
+
 [dependency-groups]
 dev = [
+    "local-first-common>=0.1.0",
     "pytest>=9.0.2",
     "pytest-cov>=7.0.0",
 ]

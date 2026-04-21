@@ -3,15 +3,18 @@ from japanese_tutor.db import Database
 
 CHARS = [{"char": "あ", "romaji": "a", "stage": "hiragana"}]
 
+
 @pytest.fixture
 def db(tmp_path):
     db_file = tmp_path / "test.db"
     return Database(db_file)
 
+
 @pytest.fixture
 def db_with_card(db):
     db.populate_characters(CHARS)
     return db
+
 
 def test_populate_and_due(db):
     chars = [{"char": "あ", "romaji": "a", "stage": "hiragana"}]
@@ -21,22 +24,24 @@ def test_populate_and_due(db):
     assert due[0]["character"] == "あ"
     assert due[0]["romaji_visible"] == 1
 
+
 def test_romaji_fading(db):
     chars = [{"char": "あ", "romaji": "a", "stage": "hiragana"}]
     db.populate_characters(chars)
     card_id = db.get_due_cards()[0]["card_id"]
-    
+
     # 5 consecutive correct
     for _ in range(5):
         db.update_card(card_id, 5, 1, 1, 2.5)
-        
+
     card = db.get_card(card_id)
     assert card["romaji_visible"] == 0
-    
+
     # One fail brings it back
     db.update_card(card_id, 0, 1, 0, 2.4)
     card = db.get_card(card_id)
     assert card["romaji_visible"] == 1
+
 
 def test_practice_mode(db):
     chars = [{"char": "あ", "romaji": "a", "stage": "hiragana"}]
@@ -46,9 +51,10 @@ def test_practice_mode(db):
     with db._get_connection() as conn:
         conn.execute("UPDATE cards SET next_review_at = '2099-01-01T00:00:00'")
 
-    # Not due
+    # Non-practice mode now backfills with upcoming cards
     due = db.get_due_cards()
-    assert len(due) == 0
+    assert len(due) == 1
+    assert due[0]["character"] == "あ"
 
     # But available in practice mode
     practice = db.get_due_cards(practice=True)
@@ -56,7 +62,28 @@ def test_practice_mode(db):
     assert practice[0]["character"] == "あ"
 
 
+def test_non_practice_backfills_to_limit(db):
+    chars = [
+        {"char": "あ", "romaji": "a", "stage": "hiragana"},
+        {"char": "い", "romaji": "i", "stage": "hiragana"},
+        {"char": "う", "romaji": "u", "stage": "hiragana"},
+    ]
+    db.populate_characters(chars)
+
+    # Make only one card truly due; other cards are in the future.
+    with db._get_connection() as conn:
+        conn.execute(
+            "UPDATE cards SET next_review_at = '2099-01-01T00:00:00' WHERE id != 1"
+        )
+
+    cards = db.get_due_cards(limit=3, practice=False)
+    assert len(cards) == 3
+    # Due card appears first, then backfilled upcoming cards.
+    assert cards[0]["card_id"] == 1
+
+
 # --- save_mnemonic idempotency ---
+
 
 def test_save_mnemonic_idempotent(db_with_card):
     card_id = db_with_card.get_due_cards()[0]["card_id"]
@@ -76,6 +103,7 @@ def test_save_mnemonic_idempotent(db_with_card):
 
 
 # --- Session management ---
+
 
 def test_start_and_end_session(db):
     session_id = db.start_session(stage="hiragana", provider="local", model="phi4-mini")

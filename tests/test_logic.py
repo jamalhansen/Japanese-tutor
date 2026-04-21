@@ -4,6 +4,7 @@ from japanese_tutor.logic import app
 from japanese_tutor.logic import JapaneseTutorError, ProviderSetupError
 from japanese_tutor.ocr import OCRError
 from japanese_tutor.api import TutorDBError
+from japanese_tutor import api
 
 
 class TestTypedErrors:
@@ -50,3 +51,38 @@ def test_run_command(mock_db, mock_resolve, mock_mount, mock_uvicorn, tmp_path):
     mock_uvicorn.assert_called_once()
     mock_db.assert_called_once()
     mock_mount.assert_called_once()
+    assert mock_mount.call_args.args[0].name == "japanese_tutor"
+
+
+@patch("uvicorn.run")
+@patch("japanese_tutor.api.mount_static")
+@patch("japanese_tutor.logic.LLMHelper")
+@patch("japanese_tutor.logic.resolve_provider")
+@patch("japanese_tutor.logic.Database")
+def test_run_command_initializes_llm_helper_with_provider(
+    mock_db,
+    mock_resolve,
+    mock_llm_helper,
+    mock_mount,
+    mock_uvicorn,
+    tmp_path,
+):
+    mock_db.return_value = MagicMock()
+    provider = MagicMock(name="provider")
+    helper = MagicMock(name="llm_helper")
+    mock_resolve.return_value = provider
+    mock_llm_helper.return_value = helper
+
+    prior_helper = api.llm_helper
+    assigned_helper = None
+    try:
+        result = runner.invoke(
+            app, ["--no-llm", "--db-path", str(tmp_path / "test.db")]
+        )
+        assigned_helper = api.llm_helper
+    finally:
+        api.llm_helper = prior_helper
+
+    assert result.exit_code == 0
+    mock_llm_helper.assert_called_once_with(provider)
+    assert assigned_helper is helper

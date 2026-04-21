@@ -86,9 +86,9 @@ def run(
             raise typer.Exit(1)
 
     # 4. Start server
-    static_dir = Path(__file__).parent.parent.parent / "static"
+    module_root = Path(__file__).parent
     print(f"Starting Japanese Tutor at http://localhost:{actual_port}")
-    api.start_server(actual_port, static_dir)
+    api.start_server(actual_port, module_root)
 
 
 if __name__ == "__main__":
