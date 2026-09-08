@@ -33,8 +33,8 @@ runner = CliRunner()
 
 @patch("uvicorn.run")
 @patch("japanese_tutor.api.mount_static")
-@patch("japanese_tutor.logic.resolve_provider")
-@patch("japanese_tutor.logic.Database")
+@patch("japanese_tutor.cli.resolve_provider")
+@patch("japanese_tutor.cli.Database")
 def test_run_command(mock_db, mock_resolve, mock_mount, mock_uvicorn, tmp_path):
     # Setup mock DB
     mock_db_instance = MagicMock()
@@ -56,9 +56,9 @@ def test_run_command(mock_db, mock_resolve, mock_mount, mock_uvicorn, tmp_path):
 
 @patch("uvicorn.run")
 @patch("japanese_tutor.api.mount_static")
-@patch("japanese_tutor.logic.LLMHelper")
-@patch("japanese_tutor.logic.resolve_provider")
-@patch("japanese_tutor.logic.Database")
+@patch("japanese_tutor.cli.LLMHelper")
+@patch("japanese_tutor.cli.resolve_provider")
+@patch("japanese_tutor.cli.Database")
 def test_run_command_initializes_llm_helper_with_provider(
     mock_db,
     mock_resolve,

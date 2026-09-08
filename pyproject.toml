@@ -17,7 +17,7 @@ dependencies = [
 ]
 
 [project.scripts]
-japanese-tutor = "japanese_tutor.logic:app"
+japanese-tutor = "japanese_tutor.cli:app"
 
 [build-system]
 requires = ["hatchling"]
