@@ -1,10 +1,11 @@
 from unittest.mock import MagicMock, patch
+
 from typer.testing import CliRunner
-from japanese_tutor.logic import app
-from japanese_tutor.logic import JapaneseTutorError, ProviderSetupError
-from japanese_tutor.ocr import OCRError
-from japanese_tutor.api import TutorDBError
+
 from japanese_tutor import api
+from japanese_tutor.api import TutorDBError
+from japanese_tutor.logic import JapaneseTutorError, ProviderSetupError, app
+from japanese_tutor.ocr import OCRError
 
 
 class TestTypedErrors:

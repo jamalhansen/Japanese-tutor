@@ -1,10 +1,11 @@
 import csv
 import io
 from pathlib import Path
-from typing import List, Union
+
 from .schema import GrammarCard, KanjiCard, VocabularyCard
 
-def export_to_csv(cards: List[Union[VocabularyCard, KanjiCard, GrammarCard]], output_path: Path):
+
+def export_to_csv(cards: list[VocabularyCard | KanjiCard | GrammarCard], output_path: Path):
     """Export cards to a CSV format suitable for Anki import."""
     if not cards:
         return
@@ -44,7 +45,7 @@ def export_to_csv(cards: List[Union[VocabularyCard, KanjiCard, GrammarCard]], ou
         writer.writerow(headers)
         writer.writerows(rows)
 
-def cards_to_string(cards: List[Union[VocabularyCard, KanjiCard, GrammarCard]]) -> str:
+def cards_to_string(cards: list[VocabularyCard | KanjiCard | GrammarCard]) -> str:
     """Convert cards to a CSV string for previewing in dry-run."""
     if not cards:
         return "No cards generated."

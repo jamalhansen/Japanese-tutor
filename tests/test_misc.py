@@ -1,5 +1,6 @@
-from japanese_tutor.schema import VocabularyCard, KanjiCard, GrammarCard
-from japanese_tutor.characters import HIRAGANA, KATAKANA, KANJI_N5
+from japanese_tutor.characters import HIRAGANA, KANJI_N5, KATAKANA
+from japanese_tutor.schema import GrammarCard, KanjiCard, VocabularyCard
+
 
 def test_schema_instantiation():
     v = VocabularyCard(kanji="猫", furigana="ねこ", english="cat")

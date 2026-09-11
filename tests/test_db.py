@@ -1,4 +1,5 @@
 import pytest
+
 from japanese_tutor.db import Database
 
 CHARS = [{"char": "あ", "romaji": "a", "stage": "hiragana"}]

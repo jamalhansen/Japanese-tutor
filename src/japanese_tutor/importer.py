@@ -1,9 +1,9 @@
 import logging
 from pathlib import Path
-from typing import List, Literal, Optional, Type, Union
+from typing import Literal
 
-from local_first_common.tracking import timed_run
 from local_first_common.providers.base import BaseProvider
+from local_first_common.tracking import timed_run
 from pydantic import BaseModel
 
 from .ocr import OCRClient
@@ -17,7 +17,7 @@ from .schema import GrammarCard, KanjiCard, ReviewResult, VocabularyCard
 logger = logging.getLogger(__name__)
 
 class TutorLogic:
-    def __init__(self, provider: BaseProvider, ocr_client: Optional[OCRClient] = None):
+    def __init__(self, provider: BaseProvider, ocr_client: OCRClient | None = None):
         self.provider = provider
         self.ocr_client = ocr_client or OCRClient()
 
@@ -48,7 +48,7 @@ class TutorLogic:
         image_path: Path,
         mode: Literal["vocabulary", "kanji", "grammar"],
         custom_instructions: str = ""
-    ) -> List[Union[VocabularyCard, KanjiCard, GrammarCard]]:
+    ) -> list[VocabularyCard | KanjiCard | GrammarCard]:
         """Main workflow: Suitability -> OCR -> Extraction."""
         
         # 1. Suitability Check
@@ -65,7 +65,7 @@ class TutorLogic:
             return []
 
         # 3. Extraction
-        schema_map: dict[str, Type[BaseModel]] = {
+        schema_map: dict[str, type[BaseModel]] = {
             "vocabulary": VocabularyCard,
             "kanji": KanjiCard,
             "grammar": GrammarCard,
@@ -77,7 +77,7 @@ class TutorLogic:
         # Actually, let's define a wrapper schema for the list.
         
         class CardList(BaseModel):
-            cards: List[schema_map[mode]] # type: ignore
+            cards: list[schema_map[mode]] # type: ignore
 
         system = get_extraction_system_prompt(mode)
         user = get_user_prompt(ocr_text, custom_instructions)

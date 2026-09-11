@@ -1,10 +1,11 @@
-from typing import TypedDict, Optional
+from typing import TypedDict
+
 
 class CharacterInfo(TypedDict):
     char: str
     romaji: str
     stage: str
-    meaning: Optional[str]
+    meaning: str | None
 
 # Full 46 Hiragana
 HIRAGANA = [

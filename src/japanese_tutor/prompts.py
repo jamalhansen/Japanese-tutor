@@ -1,5 +1,6 @@
 from typing import Literal
 
+
 def get_suitability_system_prompt() -> str:
     return (
         "You are an expert Japanese language educator and document analyst.\n"

@@ -1,19 +1,21 @@
-from typing import List
-from pydantic import BaseModel, ValidationError as PydanticValidationError
+
 from local_first_common.providers.base import BaseProvider
 from local_first_common.tracking import timed_run
+from pydantic import BaseModel
+from pydantic import ValidationError as PydanticValidationError
+
 
 class MnemonicSuggestion(BaseModel):
     body: str
 
 class MnemonicList(BaseModel):
-    suggestions: List[MnemonicSuggestion]
+    suggestions: list[MnemonicSuggestion]
 
 class LLMHelper:
     def __init__(self, provider: BaseProvider):
         self.provider = provider
 
-    def generate_mnemonics(self, character: str, romaji: str) -> List[str]:
+    def generate_mnemonics(self, character: str, romaji: str) -> list[str]:
         system = (
             "You are a Japanese language learning assistant. "
             "Generate 3 creative visual mnemonics to help a student remember the "
@@ -40,7 +42,7 @@ class LLMHelper:
             _run.item_count = len(result.suggestions)
             return [s.body for s in result.suggestions]
 
-    def generate_adaptive_example(self, character: str, mastered_vocab: List[str]) -> str:
+    def generate_adaptive_example(self, character: str, mastered_vocab: list[str]) -> str:
         system = (
             "You are a Japanese language tutor. Your task is to generate a simple example sentence "
             f"that MUST contain the Japanese character: '{character}'.\n\n"
@@ -59,7 +61,7 @@ class LLMHelper:
             _run.item_count = 1
             return result.strip()
 
-    def generate_session_debrief(self, missed_chars: List[str], recurring_chars: List[str]) -> str:
+    def generate_session_debrief(self, missed_chars: list[str], recurring_chars: list[str]) -> str:
         system = (
             "You are a supportive Japanese tutor. Analyze the user's mistakes from "
             "their last study session. Provide a 2-3 sentence debrief with actionable "

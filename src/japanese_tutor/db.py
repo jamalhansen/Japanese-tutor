@@ -1,11 +1,11 @@
 import sqlite3
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 class Database:
-    def __init__(self, db_path: Optional[Path] = None):
+    def __init__(self, db_path: Path | None = None):
         if db_path is None:
             sync_dir = Path.home() / "sync" / "japanese-tutor"
             sync_dir.mkdir(parents=True, exist_ok=True)
@@ -108,8 +108,8 @@ class Database:
                 ON associations(character_id)
             """)
 
-    def populate_characters(self, characters_list: List[Dict[str, Any]]):
-        now_str = datetime.now().isoformat()
+    def populate_characters(self, characters_list: list[dict[str, Any]]):
+        now_str = datetime.now(UTC).isoformat()
         with self._get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("SELECT COUNT(*) FROM characters")
@@ -133,9 +133,9 @@ class Database:
                 )
 
     def get_due_cards(
-        self, stage: Optional[str] = None, limit: int = 20, practice: bool = False
-    ) -> List[Dict[str, Any]]:
-        now_str = datetime.now().isoformat()
+        self, stage: str | None = None, limit: int = 20, practice: bool = False
+    ) -> list[dict[str, Any]]:
+        now_str = datetime.now(UTC).isoformat()
         with self._get_connection() as conn:
             base_query = """
                 SELECT c.id as card_id, ch.character, ch.romaji, ch.meaning, ch.stage,
@@ -204,9 +204,9 @@ class Database:
         next_interval: int,
         next_repetitions: int,
         next_ef: float,
-        session_id: Optional[int] = None,
+        session_id: int | None = None,
     ):
-        now = datetime.now()
+        now = datetime.now(UTC)
         next_review = now + timedelta(days=next_interval)
 
         # Convert to strings for Python 3.12+ sqlite3 compatibility
@@ -262,7 +262,7 @@ class Database:
                 (card_id, rating, now_str, session_id),
             )
 
-    def get_mastery_stats(self, stage: Optional[str] = None) -> List[Dict[str, Any]]:
+    def get_mastery_stats(self, stage: str | None = None) -> list[dict[str, Any]]:
         with self._get_connection() as conn:
             query = """
                 SELECT ch.character, ch.romaji, ch.stage,
@@ -281,7 +281,7 @@ class Database:
             cursor = conn.execute(query, params)
             return [dict(row) for row in cursor.fetchall()]
 
-    def get_mastered_vocabulary(self) -> List[str]:
+    def get_mastered_vocabulary(self) -> list[str]:
         with self._get_connection() as conn:
             cursor = conn.execute("""
                 SELECT ch.character FROM characters ch
@@ -292,7 +292,7 @@ class Database:
 
     def is_stage_mastered(self, stage: str, threshold: float = 90.0) -> bool:
         """Check if 90% accuracy reached for all characters in a stage with no reviews due."""
-        now_str = datetime.now().isoformat()
+        now_str = datetime.now(UTC).isoformat()
         with self._get_connection() as conn:
             # Check if any cards in this stage are still due
             cursor = conn.execute(
@@ -323,7 +323,7 @@ class Database:
             avg_accuracy = cursor.fetchone()[0]
             return avg_accuracy is not None and avg_accuracy >= threshold
 
-    def get_card(self, card_id: int) -> Dict[str, Any]:
+    def get_card(self, card_id: int) -> dict[str, Any]:
         with self._get_connection() as conn:
             cursor = conn.execute(
                 """
@@ -338,7 +338,7 @@ class Database:
             return dict(row) if row else {}
 
     def save_mnemonic(self, character_id: int, body: str, source: str = "manual"):
-        now_str = datetime.now().isoformat()
+        now_str = datetime.now(UTC).isoformat()
         with self._get_connection() as conn:
             conn.execute(
                 """
@@ -356,12 +356,12 @@ class Database:
 
     def start_session(
         self,
-        stage: Optional[str] = None,
-        provider: Optional[str] = None,
-        model: Optional[str] = None,
+        stage: str | None = None,
+        provider: str | None = None,
+        model: str | None = None,
     ) -> int:
         """Create a new session record. Returns session_id."""
-        now_str = datetime.now().isoformat()
+        now_str = datetime.now(UTC).isoformat()
         with self._get_connection() as conn:
             cursor = conn.execute(
                 """
@@ -374,7 +374,7 @@ class Database:
 
     def end_session(self, session_id: int) -> None:
         """Mark a session as ended."""
-        now_str = datetime.now().isoformat()
+        now_str = datetime.now(UTC).isoformat()
         with self._get_connection() as conn:
             conn.execute(
                 """
@@ -397,7 +397,7 @@ class Database:
                 (rating, rating, session_id),
             )
 
-    def get_sessions(self, limit: int = 20) -> List[Dict[str, Any]]:
+    def get_sessions(self, limit: int = 20) -> list[dict[str, Any]]:
         """Return recent sessions, most recent first."""
         with self._get_connection() as conn:
             cursor = conn.execute(
@@ -416,7 +416,7 @@ class Database:
             )
             return [dict(row) for row in cursor.fetchall()]
 
-    def get_session(self, session_id: int) -> Optional[Dict[str, Any]]:
+    def get_session(self, session_id: int) -> dict[str, Any] | None:
         """Return a single session with its per-character review list."""
         with self._get_connection() as conn:
             cursor = conn.execute(

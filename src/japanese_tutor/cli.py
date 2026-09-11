@@ -1,28 +1,27 @@
-from pathlib import Path
 import os
-from typing import Annotated, Optional
+from pathlib import Path
+from typing import Annotated
 
 import typer
-
-from local_first_common.providers import PROVIDERS
 from local_first_common.cli import (
-    provider_option,
-    model_option,
-    dry_run_option,
-    no_llm_option,
-    verbose_option,
     debug_option,
-    resolve_provider,
+    dry_run_option,
     init_config_option,
+    model_option,
+    no_llm_option,
+    provider_option,
+    resolve_provider,
+    verbose_option,
 )
 from local_first_common.config import get_setting
+from local_first_common.providers import PROVIDERS
 from local_first_common.tracking import register_tool
 
 from . import api
 from .characters import HIRAGANA, KATAKANA
+from .core import ProviderSetupError
 from .db import Database
 from .llm import LLMHelper
-from .core import ProviderSetupError
 
 TOOL_NAME = "japanese-tutor"
 DEFAULTS = {
@@ -37,12 +36,12 @@ app = typer.Typer(help="Japanese Tutor SRS application.")
 
 @app.command()
 def run(
-    port: Optional[int] = typer.Option(None, help="Server port"),
-    db_path: Optional[Path] = typer.Option(None, help="Custom SQLite DB path"),
+    port: int | None = typer.Option(None, help="Server port"),
+    db_path: Annotated[Path | None, typer.Option(help="Custom SQLite DB path")] = None,
     provider: Annotated[str, provider_option()] = os.environ.get(
         "MODEL_PROVIDER", "ollama"
     ),
-    model: Annotated[Optional[str], model_option()] = None,
+    model: Annotated[str | None, model_option()] = None,
     dry_run: Annotated[bool, dry_run_option()] = False,
     no_llm: Annotated[bool, no_llm_option()] = False,
     verbose: Annotated[bool, verbose_option()] = False,
@@ -72,7 +71,7 @@ def run(
         print(f"Error initializing LLM: {e}")
         if not no_llm:
             raise typer.Exit(1)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - top-level CLI boundary: report cleanly, exit only if the LLM was actually required
         print(f"Error initializing LLM: {e}")
         if not no_llm:
             raise typer.Exit(1)

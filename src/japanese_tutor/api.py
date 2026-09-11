@@ -1,18 +1,18 @@
-from typing import Optional
+from pathlib import Path
+
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
-from pathlib import Path
 
 from .db import Database
 from .llm import LLMHelper
-from .srs import SM2
 from .schema import (
-    ReviewSubmission,
-    MnemonicRequest,
     DebriefRequest,
+    MnemonicRequest,
     MnemonicSaveRequest,
+    ReviewSubmission,
     SessionStartRequest,
 )
+from .srs import SM2
 
 
 class TutorDBError(Exception):
@@ -22,12 +22,12 @@ class TutorDBError(Exception):
 app = FastAPI(title="Japanese Tutor")
 
 # Global state to be initialized by CLI
-db: Optional[Database] = None
-llm_helper: Optional[LLMHelper] = None
+db: Database | None = None
+llm_helper: LLMHelper | None = None
 
 
 @app.get("/api/cards/due")
-def get_due_cards(stage: Optional[str] = None, practice: bool = False):
+def get_due_cards(stage: str | None = None, practice: bool = False):
     if not db:
         raise HTTPException(status_code=500, detail="Database not initialized")
     try:
@@ -39,7 +39,7 @@ def get_due_cards(stage: Optional[str] = None, practice: bool = False):
             else:
                 stage = "kanji"
         return db.get_due_cards(stage=stage, practice=practice)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - FastAPI endpoint boundary: translate to a clean HTTP error, don't leak a raw traceback
         raise HTTPException(status_code=500, detail=f"Database error: {e}")
 
 
@@ -74,12 +74,12 @@ def submit_review(review: ReviewSubmission):
         return {"status": "ok"}
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - FastAPI endpoint boundary: translate to a clean HTTP error, don't leak a raw traceback
         raise HTTPException(status_code=500, detail=f"Error: {e}")
 
 
 @app.get("/api/mastery")
-def get_mastery(stage: Optional[str] = None):
+def get_mastery(stage: str | None = None):
     if not db:
         raise HTTPException(status_code=500, detail="Database not initialized")
     return db.get_mastery_stats(stage=stage)
@@ -103,7 +103,7 @@ def start_session(req: SessionStartRequest):
             stage=req.stage, provider=req.provider, model=req.model
         )
         return {"session_id": session_id}
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - FastAPI endpoint boundary: translate to a clean HTTP error, don't leak a raw traceback
         raise HTTPException(status_code=500, detail=f"Database error: {e}")
 
 
@@ -114,7 +114,7 @@ def end_session(session_id: int):
     try:
         db.end_session(session_id)
         return {"status": "ok"}
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - FastAPI endpoint boundary: translate to a clean HTTP error, don't leak a raw traceback
         raise HTTPException(status_code=500, detail=f"Database error: {e}")
 
 
@@ -124,7 +124,7 @@ def get_sessions(limit: int = 20):
         raise HTTPException(status_code=500, detail="Database not initialized")
     try:
         return db.get_sessions(limit=limit)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - FastAPI endpoint boundary: translate to a clean HTTP error, don't leak a raw traceback
         raise HTTPException(status_code=500, detail=f"Database error: {e}")
 
 
@@ -139,7 +139,7 @@ def get_session(session_id: int):
         return session
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - FastAPI endpoint boundary: translate to a clean HTTP error, don't leak a raw traceback
         raise HTTPException(status_code=500, detail=f"Database error: {e}")
 
 

@@ -1,4 +1,4 @@
-from typing import Tuple
+
 
 class SM2:
     @staticmethod
@@ -7,7 +7,7 @@ class SM2:
         repetitions: int,
         interval: int,
         easiness_factor: float
-    ) -> Tuple[int, int, float]:
+    ) -> tuple[int, int, float]:
         """
         Calculates the next interval, repetition count, and easiness factor using the SM-2 algorithm.
         
@@ -37,7 +37,6 @@ class SM2:
         new_easiness_factor = easiness_factor + (0.1 - (5 - rating) * (0.08 + (5 - rating) * 0.02))
         
         # Min easiness factor is 1.3
-        if new_easiness_factor < 1.3:
-            new_easiness_factor = 1.3
+        new_easiness_factor = max(new_easiness_factor, 1.3)
             
         return new_interval, new_repetitions, new_easiness_factor
