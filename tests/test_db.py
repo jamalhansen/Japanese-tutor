@@ -83,6 +83,48 @@ def test_non_practice_backfills_to_limit(db):
     assert cards[0]["card_id"] == 1
 
 
+def test_get_due_count_does_not_backfill(db):
+    """Regression 2026-09-20: get_due_cards() pads its response up to
+    `limit` with not-yet-due cards, so len(get_due_cards()) stays at `limit`
+    regardless of how many are genuinely overdue -- a real dashboard bug
+    where the "cards due" count never went down after reviewing several
+    cards. get_due_count() is the true overdue count, no padding."""
+    chars = [
+        {"char": "あ", "romaji": "a", "stage": "hiragana"},
+        {"char": "い", "romaji": "i", "stage": "hiragana"},
+        {"char": "う", "romaji": "u", "stage": "hiragana"},
+    ]
+    db.populate_characters(chars)
+
+    # Make only one card truly due; other cards are in the future.
+    with db._get_connection() as conn:
+        conn.execute(
+            "UPDATE cards SET next_review_at = '2099-01-01T00:00:00' WHERE id != 1"
+        )
+
+    # get_due_cards() backfills to 3 (limit's default of 20, capped by deck size)
+    assert len(db.get_due_cards()) == 3
+    # get_due_count() reports the real number: 1
+    assert db.get_due_count() == 1
+
+
+def test_get_due_count_goes_to_zero_when_nothing_is_due(db_with_card):
+    with db_with_card._get_connection() as conn:
+        conn.execute("UPDATE cards SET next_review_at = '2099-01-01T00:00:00'")
+    assert db_with_card.get_due_count() == 0
+
+
+def test_get_due_count_respects_stage_filter(db):
+    chars = [
+        {"char": "あ", "romaji": "a", "stage": "hiragana"},
+        {"char": "ア", "romaji": "a", "stage": "katakana"},
+    ]
+    db.populate_characters(chars)
+    assert db.get_due_count(stage="hiragana") == 1
+    assert db.get_due_count(stage="katakana") == 1
+    assert db.get_due_count() == 2
+
+
 # --- save_mnemonic idempotency ---
 
 

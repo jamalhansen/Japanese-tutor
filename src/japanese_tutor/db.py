@@ -132,6 +132,29 @@ class Database:
                     (now_str, now_str),
                 )
 
+    def get_due_count(self, stage: str | None = None) -> int:
+        """True count of cards actually overdue right now -- distinct from
+        get_due_cards(), which pads its response up to `limit` with
+        not-yet-due cards to keep a study session full. Found live 2026-09-20:
+        a caller reading len(get_due_cards()) as "how many need review" saw
+        the same number before and after reviewing several cards, since the
+        session-padding backfill kept the returned list at `limit` regardless
+        of how many were genuinely overdue."""
+        now_str = datetime.now(UTC).isoformat()
+        with self._get_connection() as conn:
+            query = """
+                SELECT COUNT(*) as due_count
+                FROM cards c
+                JOIN characters ch ON c.character_id = ch.id
+                WHERE c.next_review_at <= ?
+            """
+            params: list[Any] = [now_str]
+            if stage:
+                query += " AND ch.stage = ?"
+                params.append(stage)
+            row = conn.execute(query, params).fetchone()
+            return row["due_count"] if row else 0
+
     def get_due_cards(
         self, stage: str | None = None, limit: int = 20, practice: bool = False
     ) -> list[dict[str, Any]]:

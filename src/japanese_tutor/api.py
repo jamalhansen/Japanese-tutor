@@ -26,19 +26,35 @@ db: Database | None = None
 llm_helper: LLMHelper | None = None
 
 
+def _resolve_current_stage(stage: str | None) -> str:
+    if stage is not None:
+        return stage
+    if not db.is_stage_mastered("hiragana"):
+        return "hiragana"
+    if not db.is_stage_mastered("katakana"):
+        return "katakana"
+    return "kanji"
+
+
 @app.get("/api/cards/due")
 def get_due_cards(stage: str | None = None, practice: bool = False):
     if not db:
         raise HTTPException(status_code=500, detail="Database not initialized")
     try:
-        if stage is None:
-            if not db.is_stage_mastered("hiragana"):
-                stage = "hiragana"
-            elif not db.is_stage_mastered("katakana"):
-                stage = "katakana"
-            else:
-                stage = "kanji"
-        return db.get_due_cards(stage=stage, practice=practice)
+        return db.get_due_cards(stage=_resolve_current_stage(stage), practice=practice)
+    except Exception as e:  # noqa: BLE001 - FastAPI endpoint boundary: translate to a clean HTTP error, don't leak a raw traceback
+        raise HTTPException(status_code=500, detail=f"Database error: {e}")
+
+
+@app.get("/api/cards/due/count")
+def get_due_count(stage: str | None = None):
+    """True count of cards overdue right now -- unlike /api/cards/due, this
+    never pads with not-yet-due cards, so it actually goes down as you
+    review. See Database.get_due_count()'s docstring for why the two differ."""
+    if not db:
+        raise HTTPException(status_code=500, detail="Database not initialized")
+    try:
+        return {"due_count": db.get_due_count(stage=_resolve_current_stage(stage))}
     except Exception as e:  # noqa: BLE001 - FastAPI endpoint boundary: translate to a clean HTTP error, don't leak a raw traceback
         raise HTTPException(status_code=500, detail=f"Database error: {e}")
 

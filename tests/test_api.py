@@ -37,6 +37,28 @@ def test_get_due_cards_practice(mock_state):
     api.db.get_due_cards.assert_called_with(stage="hiragana", practice=True)
 
 
+def test_get_due_count(mock_state):
+    """Regression 2026-09-20: /api/cards/due always returns `limit` cards
+    (backfilled with not-yet-due ones), so its length never reflects real
+    progress. /api/cards/due/count is the true overdue count."""
+    api.db.is_stage_mastered.return_value = False
+    api.db.get_due_count.return_value = 3
+
+    response = client.get("/api/cards/due/count")
+    assert response.status_code == 200
+    assert response.json() == {"due_count": 3}
+    api.db.get_due_count.assert_called_with(stage="hiragana")
+
+
+def test_get_due_count_explicit_stage(mock_state):
+    api.db.get_due_count.return_value = 0
+
+    response = client.get("/api/cards/due/count?stage=katakana")
+    assert response.status_code == 200
+    api.db.get_due_count.assert_called_with(stage="katakana")
+    api.db.is_stage_mastered.assert_not_called()
+
+
 def test_submit_review(mock_state):
     api.db.get_card.return_value = {
         "id": 1,
