@@ -655,7 +655,7 @@ wheels = [
 [[package]]
 name = "local-first-common"
 version = "0.1.0"
-source = { git = "https://github.com/jamalhansen/local-first-common.git?branch=main#dddafce4209d163e8120728f0a0f9946c25eb1b1" }
+source = { git = "https://github.com/jamalhansen/local-first-common.git?branch=main#ef6012698bd7079e4bf34c8a90deb8cdd42a0e4b" }
 dependencies = [
     { name = "beautifulsoup4" },
     { name = "duckdb" },

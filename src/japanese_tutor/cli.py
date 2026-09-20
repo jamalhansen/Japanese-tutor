@@ -64,7 +64,13 @@ def run(
     # 3. Initialize LLM helper
     try:
         llm = resolve_provider(
-            PROVIDERS, actual_provider, actual_model, debug=debug, no_llm=no_llm
+            PROVIDERS,
+            actual_provider,
+            actual_model,
+            debug=debug,
+            no_llm=no_llm,
+            fallback_provider="deepseek",
+            tool_name=TOOL_NAME,
         )
         api.llm_helper = LLMHelper(llm)
     except ProviderSetupError as e:
