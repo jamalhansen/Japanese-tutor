@@ -125,6 +125,42 @@ def test_get_due_count_respects_stage_filter(db):
     assert db.get_due_count() == 2
 
 
+def test_get_due_breakdown_splits_new_from_review(db):
+    """Regression 2026-09-20: Jamal read a flat "26 due" as 26 overdue
+    re-reviews; all 26 were actually untouched cards (repetitions=0).
+    new/review need to be reported separately."""
+    chars = [
+        {"char": "あ", "romaji": "a", "stage": "hiragana"},
+        {"char": "い", "romaji": "i", "stage": "hiragana"},
+        {"char": "う", "romaji": "u", "stage": "hiragana"},
+    ]
+    db.populate_characters(chars)
+    cards = db.get_due_cards()
+    reviewed_card_id = cards[0]["card_id"]
+    db.update_card(reviewed_card_id, 5, 1, 1, 2.6)  # now repetitions=1, due again immediately (interval unspecified -> next_review recalculated)
+
+    # Force the just-reviewed card back into the due window so it counts
+    # as a real "review" (not "new") for this assertion.
+    with db._get_connection() as conn:
+        conn.execute(
+            "UPDATE cards SET next_review_at = '2020-01-01T00:00:00+00:00' WHERE id = ?",
+            (reviewed_card_id,),
+        )
+
+    breakdown = db.get_due_breakdown(stage="hiragana")
+    assert breakdown == {"new": 2, "review": 1}
+
+
+def test_get_due_breakdown_respects_stage_filter(db):
+    chars = [
+        {"char": "あ", "romaji": "a", "stage": "hiragana"},
+        {"char": "ア", "romaji": "a", "stage": "katakana"},
+    ]
+    db.populate_characters(chars)
+    assert db.get_due_breakdown(stage="hiragana") == {"new": 1, "review": 0}
+    assert db.get_due_breakdown(stage="katakana") == {"new": 1, "review": 0}
+
+
 def test_get_reviews_today_count_is_zero_with_no_reviews(db_with_card):
     counts = db_with_card.get_reviews_today_count()
     assert counts == {"attempts": 0, "distinct_cards": 0}

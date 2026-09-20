@@ -155,6 +155,32 @@ class Database:
             row = conn.execute(query, params).fetchone()
             return row["due_count"] if row else 0
 
+    def get_due_breakdown(self, stage: str | None = None) -> dict[str, int]:
+        """Split get_due_count() into new (never reviewed, repetitions=0)
+        vs review (has been reviewed before and is due again). Found live
+        2026-09-20: Jamal read "26 due" as 26 overdue re-reviews, but they
+        were all untouched cards -- a single "due" number conflates two
+        different things a learner would act on differently."""
+        now_str = datetime.now(UTC).isoformat()
+        with self._get_connection() as conn:
+            query = """
+                SELECT
+                    SUM(CASE WHEN c.repetitions = 0 THEN 1 ELSE 0 END) as new_count,
+                    SUM(CASE WHEN c.repetitions > 0 THEN 1 ELSE 0 END) as review_count
+                FROM cards c
+                JOIN characters ch ON c.character_id = ch.id
+                WHERE c.next_review_at <= ?
+            """
+            params: list[Any] = [now_str]
+            if stage:
+                query += " AND ch.stage = ?"
+                params.append(stage)
+            row = conn.execute(query, params).fetchone()
+            return {
+                "new": (row["new_count"] or 0) if row else 0,
+                "review": (row["review_count"] or 0) if row else 0,
+            }
+
     def get_reviews_today_count(self) -> dict[str, int]:
         """Real review activity since local midnight -- distinct from due-card
         counts, which reflect backlog, not effort. Found live 2026-09-20:

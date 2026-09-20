@@ -43,19 +43,23 @@ def test_get_due_count(mock_state):
     progress. /api/cards/due/count is the true overdue count."""
     api.db.is_stage_mastered.return_value = False
     api.db.get_due_count.return_value = 3
+    api.db.get_due_breakdown.return_value = {"new": 2, "review": 1}
 
     response = client.get("/api/cards/due/count")
     assert response.status_code == 200
-    assert response.json() == {"due_count": 3}
+    assert response.json() == {"due_count": 3, "new_count": 2, "review_count": 1}
     api.db.get_due_count.assert_called_with(stage="hiragana")
+    api.db.get_due_breakdown.assert_called_with(stage="hiragana")
 
 
 def test_get_due_count_explicit_stage(mock_state):
     api.db.get_due_count.return_value = 0
+    api.db.get_due_breakdown.return_value = {"new": 0, "review": 0}
 
     response = client.get("/api/cards/due/count?stage=katakana")
     assert response.status_code == 200
     api.db.get_due_count.assert_called_with(stage="katakana")
+    api.db.get_due_breakdown.assert_called_with(stage="katakana")
     api.db.is_stage_mastered.assert_not_called()
 
 

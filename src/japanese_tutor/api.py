@@ -50,11 +50,22 @@ def get_due_cards(stage: str | None = None, practice: bool = False):
 def get_due_count(stage: str | None = None):
     """True count of cards overdue right now -- unlike /api/cards/due, this
     never pads with not-yet-due cards, so it actually goes down as you
-    review. See Database.get_due_count()'s docstring for why the two differ."""
+    review. See Database.get_due_count()'s docstring for why the two differ.
+
+    Also splits the total into new_count/review_count -- found live
+    2026-09-20: a flat due_count reads as "overdue re-reviews" but was
+    entirely never-touched cards, which a learner should treat differently.
+    """
     if not db:
         raise HTTPException(status_code=500, detail="Database not initialized")
     try:
-        return {"due_count": db.get_due_count(stage=_resolve_current_stage(stage))}
+        resolved_stage = _resolve_current_stage(stage)
+        breakdown = db.get_due_breakdown(stage=resolved_stage)
+        return {
+            "due_count": db.get_due_count(stage=resolved_stage),
+            "new_count": breakdown["new"],
+            "review_count": breakdown["review"],
+        }
     except Exception as e:  # noqa: BLE001 - FastAPI endpoint boundary: translate to a clean HTTP error, don't leak a raw traceback
         raise HTTPException(status_code=500, detail=f"Database error: {e}")
 
