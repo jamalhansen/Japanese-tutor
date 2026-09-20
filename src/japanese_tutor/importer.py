@@ -1,3 +1,4 @@
+import base64
 import logging
 from pathlib import Path
 from typing import Literal
@@ -29,10 +30,11 @@ class TutorLogic:
         # We need an image-capable model for this. 
         # local-first-common GeminiProvider handles images if passed.
         with timed_run("japanese-tutor", self.provider.model, source_location=str(image_path)) as _run:
-            # Read image as bytes
+            # Every provider's images= expects a base64-encoded string, not raw bytes
+            # (GatewayProvider in particular has to fit this into a JSON request body).
             with open(image_path, "rb") as f:
-                img_data = f.read()
-            
+                img_data = base64.b64encode(f.read()).decode("ascii")
+
             raw_result = self.provider.complete(
                 system=system,
                 user=user,
