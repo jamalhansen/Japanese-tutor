@@ -43,6 +43,8 @@ class TutorLogic:
             )
             result = ReviewResult.model_validate(raw_result)
             _run.item_count = 1
+            _run.model = self.provider.model
+            _run.provider = getattr(self.provider, "provider_name", None)
             return result
 
     def process_image(
@@ -93,4 +95,6 @@ class TutorLogic:
             )
             result = CardList.model_validate(raw_result)
             _run.item_count = len(result.cards)
+            _run.model = self.provider.model
+            _run.provider = getattr(self.provider, "provider_name", None)
             return result.cards

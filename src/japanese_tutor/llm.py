@@ -40,6 +40,11 @@ class LLMHelper:
                     f"LLM returned unexpected format for mnemonics: {e}"
                 ) from e
             _run.item_count = len(result.suggestions)
+            # self.provider.model was "" at timed_run() call time for a
+            # GatewayProvider with no explicit --model -- re-read now that
+            # the call has resolved it.
+            _run.model = self.provider.model
+            _run.provider = getattr(self.provider, "provider_name", None)
             return [s.body for s in result.suggestions]
 
     def generate_adaptive_example(self, character: str, mastered_vocab: list[str]) -> str:
@@ -59,6 +64,8 @@ class LLMHelper:
         with timed_run("japanese-tutor", self.provider.model, source_location=f"example:{character}") as _run:
             result = self.provider.complete(system=system, user=user)
             _run.item_count = 1
+            _run.model = self.provider.model
+            _run.provider = getattr(self.provider, "provider_name", None)
             return result.strip()
 
     def generate_session_debrief(self, missed_chars: list[str], recurring_chars: list[str]) -> str:
@@ -74,4 +81,6 @@ class LLMHelper:
         with timed_run("japanese-tutor", self.provider.model, source_location="session_debrief") as _run:
             result = self.provider.complete(system=system, user=user)
             _run.item_count = 1
+            _run.model = self.provider.model
+            _run.provider = getattr(self.provider, "provider_name", None)
             return result
