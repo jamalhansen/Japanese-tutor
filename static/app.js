@@ -178,10 +178,13 @@ async function submitReview(rating) {
   }
 }
 
-document.getElementById("edit-mnemonic").onclick = async () => {
+document.getElementById("write-own-mnemonic").onclick = async () => {
   const current = document.getElementById("mnemonic-display").innerText;
-  const mnemonic = prompt("Enter your mnemonic phrase:", current);
-  if (mnemonic !== null) {
+  const promptText = current
+    ? "Edit your mnemonic phrase:"
+    : `Write your own way to remember ${currentCard ? currentCard.character : "this"}:`;
+  const mnemonic = prompt(promptText, current);
+  if (mnemonic !== null && mnemonic.trim() !== "") {
     document.getElementById("mnemonic-display").innerText = mnemonic;
     await saveMnemonic(mnemonic, "manual");
   }
