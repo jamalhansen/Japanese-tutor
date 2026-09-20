@@ -155,6 +155,31 @@ class Database:
             row = conn.execute(query, params).fetchone()
             return row["due_count"] if row else 0
 
+    def get_reviews_today_count(self) -> dict[str, int]:
+        """Real review activity since local midnight -- distinct from due-card
+        counts, which reflect backlog, not effort. Found live 2026-09-20:
+        Jamal reviewed ~15 cards and the due count barely moved, and the due
+        count alone can't explain why -- attempts includes retries on a
+        struggling card, distinct_cards is how many different characters
+        were actually touched, and the gap between the two IS the answer
+        ("you retried the same few cards"), not visible from either number
+        alone. reviewed_at is stored in UTC; "today" is the local calendar
+        day, converted to a UTC boundary for the comparison."""
+        local_midnight = datetime.now().astimezone().replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
+        since_utc = local_midnight.astimezone(UTC).isoformat()
+        with self._get_connection() as conn:
+            row = conn.execute(
+                "SELECT COUNT(*) as attempts, COUNT(DISTINCT card_id) as distinct_cards "
+                "FROM reviews WHERE reviewed_at >= ?",
+                (since_utc,),
+            ).fetchone()
+            return {
+                "attempts": row["attempts"] if row else 0,
+                "distinct_cards": row["distinct_cards"] if row else 0,
+            }
+
     def get_due_cards(
         self, stage: str | None = None, limit: int = 20, practice: bool = False
     ) -> list[dict[str, Any]]:

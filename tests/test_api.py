@@ -59,6 +59,17 @@ def test_get_due_count_explicit_stage(mock_state):
     api.db.is_stage_mastered.assert_not_called()
 
 
+def test_get_reviews_today(mock_state):
+    api.db.get_reviews_today_count.return_value = {
+        "attempts": 3,
+        "distinct_cards": 2,
+    }
+
+    response = client.get("/api/reviews/today")
+    assert response.status_code == 200
+    assert response.json() == {"attempts": 3, "distinct_cards": 2}
+
+
 def test_submit_review(mock_state):
     api.db.get_card.return_value = {
         "id": 1,

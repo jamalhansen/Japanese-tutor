@@ -125,6 +125,53 @@ def test_get_due_count_respects_stage_filter(db):
     assert db.get_due_count() == 2
 
 
+def test_get_reviews_today_count_is_zero_with_no_reviews(db_with_card):
+    counts = db_with_card.get_reviews_today_count()
+    assert counts == {"attempts": 0, "distinct_cards": 0}
+
+
+def test_get_reviews_today_count_counts_attempts_and_distinct_cards(db):
+    """Regression 2026-09-20: due count alone couldn't explain why reviewing
+    ~15 cards barely moved it -- attempts (every submission, including
+    retries) vs distinct_cards (unique characters touched) is the real
+    answer, and the two numbers together show it."""
+    chars = [
+        {"char": "あ", "romaji": "a", "stage": "hiragana"},
+        {"char": "い", "romaji": "i", "stage": "hiragana"},
+    ]
+    db.populate_characters(chars)
+    cards = db.get_due_cards()
+    card_a, card_b = cards[0]["card_id"], cards[1]["card_id"]
+
+    # Two attempts on the same card (a retry), one on another.
+    db.update_card(card_a, 5, 1, 1, 2.5)
+    db.update_card(card_a, 2, 1, 0, 2.4)
+    db.update_card(card_b, 5, 1, 1, 2.5)
+
+    counts = db.get_reviews_today_count()
+    assert counts == {"attempts": 3, "distinct_cards": 2}
+
+
+def test_get_reviews_today_count_excludes_reviews_from_before_local_midnight(
+    db_with_card,
+):
+    card_id = db_with_card.get_due_cards()[0]["card_id"]
+    db_with_card.update_card(card_id, 5, 1, 1, 2.5)
+
+    # Backdate the just-inserted review to well before today.
+    with db_with_card._get_connection() as conn:
+        conn.execute(
+            "UPDATE reviews SET reviewed_at = '2020-01-01T00:00:00+00:00' "
+            "WHERE card_id = ?",
+            (card_id,),
+        )
+
+    assert db_with_card.get_reviews_today_count() == {
+        "attempts": 0,
+        "distinct_cards": 0,
+    }
+
+
 # --- save_mnemonic idempotency ---
 
 

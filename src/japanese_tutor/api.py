@@ -59,6 +59,21 @@ def get_due_count(stage: str | None = None):
         raise HTTPException(status_code=500, detail=f"Database error: {e}")
 
 
+@app.get("/api/reviews/today")
+def get_reviews_today():
+    """Real review effort today -- distinct from the due count, which
+    reflects backlog, not what you actually did. attempts counts every
+    submission including retries on a struggling card; distinct_cards is how
+    many different characters were touched, which is usually the more
+    meaningful "progress" number."""
+    if not db:
+        raise HTTPException(status_code=500, detail="Database not initialized")
+    try:
+        return db.get_reviews_today_count()
+    except Exception as e:  # noqa: BLE001 - FastAPI endpoint boundary: translate to a clean HTTP error, don't leak a raw traceback
+        raise HTTPException(status_code=500, detail=f"Database error: {e}")
+
+
 @app.post("/api/reviews")
 def submit_review(review: ReviewSubmission):
     if not db:
