@@ -1,70 +1,42 @@
-"""Regression 2026-09-20: japanese-tutor's own processing_log rows showed up
-with an empty model whenever routed through the gateway with no explicit
---model (LLM_GATEWAY_URL is exported globally, so this is the fleet-wide
-default path). Root cause: llm.model was captured for timed_run() before
-self.provider.complete() resolved it. Re-read self.provider.model/provider_name
-inside each block, after the call, for all 3 LLMHelper methods. Each test
-here mutates .model *inside* _complete() (not before construction) to prove
-the value is re-read post-call, not just captured lucky at construction time.
+"""Regression 2026-09-20: an LLM call is logged once, inside the gateway --
+japanese-tutor used to keep its own duplicate processing_log row via
+timed_run(), re-reading self.provider.model/provider_name after the call to
+work around a GatewayProvider's model resolving mid-call. That workaround
+is gone along with the second write; source_location now travels to the
+gateway via self.provider.source_location instead, set before the call
+(item_count is dropped where it depended on the response, like the number
+of mnemonics returned -- unknowable before the request is sent).
 """
-import duckdb
 from local_first_common.testing import MockProvider
-from local_first_common.tracking import get_tracking_db_path
 
 from japanese_tutor.llm import LLMHelper
 
 
-def _resolving_provider(response):
-    class ResolvesModelDuringCall(MockProvider):
-        default_model = ""  # matches GatewayProvider's own real default when no model is specified
-
-        def _complete(self, system, user, response_model=None, images=None):
-            result = super()._complete(system, user, response_model, images)
-            self.model = "phi4-mini"  # simulates the gateway resolving an unspecified model
-            return result
-
-    return ResolvesModelDuringCall(response=response)
-
-
-def _last_row():
-    conn = duckdb.connect(str(get_tracking_db_path()))
-    row = conn.execute(
-        "SELECT model, provider FROM processing_log WHERE tool_name = 'japanese-tutor' ORDER BY id DESC LIMIT 1"
-    ).fetchone()
-    conn.close()
-    return row
-
-
-def test_generate_mnemonics_logs_the_model_resolved_after_the_call():
-    llm = _resolving_provider('{"suggestions": [{"body": "a mnemonic"}]}')
-    assert llm.model == ""
+def test_generate_mnemonics_sets_source_location_before_the_call():
+    llm = MockProvider(response='{"suggestions": [{"body": "a mnemonic"}]}')
     helper = LLMHelper(llm)
 
     result = helper.generate_mnemonics("あ", "a")
 
     assert result == ["a mnemonic"]
-    row = _last_row()
-    assert row[0] == "phi4-mini"
-    assert row[1] == "mock"
+    assert llm.source_location == "mnemonic:あ"
 
 
-def test_generate_adaptive_example_logs_the_model_resolved_after_the_call():
-    llm = _resolving_provider("こんにちは")
+def test_generate_adaptive_example_sets_source_location_before_the_call():
+    llm = MockProvider(response="こんにちは")
     helper = LLMHelper(llm)
 
     helper.generate_adaptive_example("あ", ["こんにちは"])
 
-    row = _last_row()
-    assert row[0] == "phi4-mini"
-    assert row[1] == "mock"
+    assert llm.source_location == "example:あ"
+    assert llm.item_count == 1
 
 
-def test_generate_session_debrief_logs_the_model_resolved_after_the_call():
-    llm = _resolving_provider("Good session overall.")
+def test_generate_session_debrief_sets_source_location_before_the_call():
+    llm = MockProvider(response="Good session overall.")
     helper = LLMHelper(llm)
 
     helper.generate_session_debrief(["あ"], ["い"])
 
-    row = _last_row()
-    assert row[0] == "phi4-mini"
-    assert row[1] == "mock"
+    assert llm.source_location == "session_debrief"
+    assert llm.item_count == 1

@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import Literal
 
 from local_first_common.providers.base import BaseProvider
-from local_first_common.tracking import timed_run
 from pydantic import BaseModel
 
 from .ocr import OCRClient
@@ -29,23 +28,20 @@ class TutorLogic:
         
         # We need an image-capable model for this. 
         # local-first-common GeminiProvider handles images if passed.
-        with timed_run("japanese-tutor", self.provider.model, source_location=str(image_path)) as _run:
-            # Every provider's images= expects a base64-encoded string, not raw bytes
-            # (GatewayProvider in particular has to fit this into a JSON request body).
-            with open(image_path, "rb") as f:
-                img_data = base64.b64encode(f.read()).decode("ascii")
+        # Every provider's images= expects a base64-encoded string, not raw bytes
+        # (GatewayProvider in particular has to fit this into a JSON request body).
+        with open(image_path, "rb") as f:
+            img_data = base64.b64encode(f.read()).decode("ascii")
 
-            raw_result = self.provider.complete(
-                system=system,
-                user=user,
-                response_model=ReviewResult,
-                images=[img_data]
-            )
-            result = ReviewResult.model_validate(raw_result)
-            _run.item_count = 1
-            _run.model = self.provider.model
-            _run.provider = getattr(self.provider, "provider_name", None)
-            return result
+        self.provider.source_location = str(image_path)
+        self.provider.item_count = 1
+        raw_result = self.provider.complete(
+            system=system,
+            user=user,
+            response_model=ReviewResult,
+            images=[img_data]
+        )
+        return ReviewResult.model_validate(raw_result)
 
     def process_image(
         self,
@@ -87,14 +83,11 @@ class TutorLogic:
         user = get_user_prompt(ocr_text, custom_instructions)
         
         logger.info(f"Extracting {mode} data using LLM...")
-        with timed_run("japanese-tutor", self.provider.model, source_location=str(image_path)) as _run:
-            raw_result = self.provider.complete(
-                system=system,
-                user=user,
-                response_model=CardList
-            )
-            result = CardList.model_validate(raw_result)
-            _run.item_count = len(result.cards)
-            _run.model = self.provider.model
-            _run.provider = getattr(self.provider, "provider_name", None)
-            return result.cards
+        self.provider.source_location = str(image_path)
+        raw_result = self.provider.complete(
+            system=system,
+            user=user,
+            response_model=CardList
+        )
+        result = CardList.model_validate(raw_result)
+        return result.cards

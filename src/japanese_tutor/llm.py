@@ -1,6 +1,5 @@
 
 from local_first_common.providers.base import BaseProvider
-from local_first_common.tracking import timed_run
 from pydantic import BaseModel
 from pydantic import ValidationError as PydanticValidationError
 
@@ -27,25 +26,19 @@ class LLMHelper:
             "Provide 3 short, catchy mnemonics. Each should be one sentence."
         )
 
-        with timed_run("japanese-tutor", self.provider.model, source_location=f"mnemonic:{character}") as _run:
-            raw_result = self.provider.complete(
-                system=system,
-                user=user,
-                response_model=MnemonicList
-            )
-            try:
-                result = MnemonicList.model_validate(raw_result)
-            except PydanticValidationError as e:
-                raise RuntimeError(
-                    f"LLM returned unexpected format for mnemonics: {e}"
-                ) from e
-            _run.item_count = len(result.suggestions)
-            # self.provider.model was "" at timed_run() call time for a
-            # GatewayProvider with no explicit --model -- re-read now that
-            # the call has resolved it.
-            _run.model = self.provider.model
-            _run.provider = getattr(self.provider, "provider_name", None)
-            return [s.body for s in result.suggestions]
+        self.provider.source_location = f"mnemonic:{character}"
+        raw_result = self.provider.complete(
+            system=system,
+            user=user,
+            response_model=MnemonicList
+        )
+        try:
+            result = MnemonicList.model_validate(raw_result)
+        except PydanticValidationError as e:
+            raise RuntimeError(
+                f"LLM returned unexpected format for mnemonics: {e}"
+            ) from e
+        return [s.body for s in result.suggestions]
 
     def generate_adaptive_example(self, character: str, mastered_vocab: list[str]) -> str:
         system = (
@@ -61,12 +54,10 @@ class LLMHelper:
         vocab_text = ", ".join(mastered_vocab) if mastered_vocab else "None yet (use only basic particles/grammar)."
         user = f"Target Character: {character}\nMastered Vocabulary: {vocab_text}\n\nGenerate the example sentence:"
 
-        with timed_run("japanese-tutor", self.provider.model, source_location=f"example:{character}") as _run:
-            result = self.provider.complete(system=system, user=user)
-            _run.item_count = 1
-            _run.model = self.provider.model
-            _run.provider = getattr(self.provider, "provider_name", None)
-            return result.strip()
+        self.provider.source_location = f"example:{character}"
+        self.provider.item_count = 1
+        result = self.provider.complete(system=system, user=user)
+        return result.strip()
 
     def generate_session_debrief(self, missed_chars: list[str], recurring_chars: list[str]) -> str:
         system = (
@@ -78,9 +69,6 @@ class LLMHelper:
         recurring = ", ".join(recurring_chars)
         user = f"Missed this session: {missed}\nRecurringly missed: {recurring}"
 
-        with timed_run("japanese-tutor", self.provider.model, source_location="session_debrief") as _run:
-            result = self.provider.complete(system=system, user=user)
-            _run.item_count = 1
-            _run.model = self.provider.model
-            _run.provider = getattr(self.provider, "provider_name", None)
-            return result
+        self.provider.source_location = "session_debrief"
+        self.provider.item_count = 1
+        return self.provider.complete(system=system, user=user)
