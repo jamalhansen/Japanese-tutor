@@ -4,7 +4,8 @@ from typer.testing import CliRunner
 
 from japanese_tutor import api
 from japanese_tutor.api import TutorDBError
-from japanese_tutor.logic import JapaneseTutorError, ProviderSetupError, app
+from japanese_tutor.cli import app
+from japanese_tutor.core import JapaneseTutorError, ProviderSetupError
 from japanese_tutor.ocr import OCRError
 
 
