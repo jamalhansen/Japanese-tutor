@@ -76,11 +76,11 @@ def run(
     except ProviderSetupError as e:
         print(f"Error initializing LLM: {e}")
         if not no_llm:
-            raise typer.Exit(1)
+            raise typer.Exit(1) from None
     except Exception as e:  # noqa: BLE001 - top-level CLI boundary: report cleanly, exit only if the LLM was actually required
         print(f"Error initializing LLM: {e}")
         if not no_llm:
-            raise typer.Exit(1)
+            raise typer.Exit(1) from None
 
     # 4. Start server
     module_root = Path(__file__).parent

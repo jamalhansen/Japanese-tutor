@@ -42,8 +42,8 @@ def get_due_cards(stage: str | None = None, practice: bool = False):
         raise HTTPException(status_code=500, detail="Database not initialized")
     try:
         return db.get_due_cards(stage=_resolve_current_stage(stage), practice=practice)
-    except Exception as e:  # noqa: BLE001 - FastAPI endpoint boundary: translate to a clean HTTP error, don't leak a raw traceback
-        raise HTTPException(status_code=500, detail=f"Database error: {e}")
+    except Exception as e:  # FastAPI endpoint boundary: translate to a clean HTTP error, don't leak a raw traceback
+        raise HTTPException(status_code=500, detail=f"Database error: {e}") from e
 
 
 @app.get("/api/cards/due/count")
@@ -66,8 +66,8 @@ def get_due_count(stage: str | None = None):
             "new_count": breakdown["new"],
             "review_count": breakdown["review"],
         }
-    except Exception as e:  # noqa: BLE001 - FastAPI endpoint boundary: translate to a clean HTTP error, don't leak a raw traceback
-        raise HTTPException(status_code=500, detail=f"Database error: {e}")
+    except Exception as e:  # FastAPI endpoint boundary: translate to a clean HTTP error, don't leak a raw traceback
+        raise HTTPException(status_code=500, detail=f"Database error: {e}") from e
 
 
 @app.get("/api/reviews/today")
@@ -81,8 +81,8 @@ def get_reviews_today():
         raise HTTPException(status_code=500, detail="Database not initialized")
     try:
         return db.get_reviews_today_count()
-    except Exception as e:  # noqa: BLE001 - FastAPI endpoint boundary: translate to a clean HTTP error, don't leak a raw traceback
-        raise HTTPException(status_code=500, detail=f"Database error: {e}")
+    except Exception as e:  # FastAPI endpoint boundary: translate to a clean HTTP error, don't leak a raw traceback
+        raise HTTPException(status_code=500, detail=f"Database error: {e}") from e
 
 
 @app.post("/api/reviews")
@@ -116,8 +116,8 @@ def submit_review(review: ReviewSubmission):
         return {"status": "ok"}
     except HTTPException:
         raise
-    except Exception as e:  # noqa: BLE001 - FastAPI endpoint boundary: translate to a clean HTTP error, don't leak a raw traceback
-        raise HTTPException(status_code=500, detail=f"Error: {e}")
+    except Exception as e:  # FastAPI endpoint boundary: translate to a clean HTTP error, don't leak a raw traceback
+        raise HTTPException(status_code=500, detail=f"Error: {e}") from e
 
 
 @app.get("/api/mastery")
@@ -145,8 +145,8 @@ def start_session(req: SessionStartRequest):
             stage=req.stage, provider=req.provider, model=req.model
         )
         return {"session_id": session_id}
-    except Exception as e:  # noqa: BLE001 - FastAPI endpoint boundary: translate to a clean HTTP error, don't leak a raw traceback
-        raise HTTPException(status_code=500, detail=f"Database error: {e}")
+    except Exception as e:  # FastAPI endpoint boundary: translate to a clean HTTP error, don't leak a raw traceback
+        raise HTTPException(status_code=500, detail=f"Database error: {e}") from e
 
 
 @app.post("/api/session/end/{session_id}")
@@ -156,8 +156,8 @@ def end_session(session_id: int):
     try:
         db.end_session(session_id)
         return {"status": "ok"}
-    except Exception as e:  # noqa: BLE001 - FastAPI endpoint boundary: translate to a clean HTTP error, don't leak a raw traceback
-        raise HTTPException(status_code=500, detail=f"Database error: {e}")
+    except Exception as e:  # FastAPI endpoint boundary: translate to a clean HTTP error, don't leak a raw traceback
+        raise HTTPException(status_code=500, detail=f"Database error: {e}") from e
 
 
 @app.get("/api/sessions")
@@ -166,8 +166,8 @@ def get_sessions(limit: int = 20):
         raise HTTPException(status_code=500, detail="Database not initialized")
     try:
         return db.get_sessions(limit=limit)
-    except Exception as e:  # noqa: BLE001 - FastAPI endpoint boundary: translate to a clean HTTP error, don't leak a raw traceback
-        raise HTTPException(status_code=500, detail=f"Database error: {e}")
+    except Exception as e:  # FastAPI endpoint boundary: translate to a clean HTTP error, don't leak a raw traceback
+        raise HTTPException(status_code=500, detail=f"Database error: {e}") from e
 
 
 @app.get("/api/sessions/{session_id}")
@@ -181,8 +181,8 @@ def get_session(session_id: int):
         return session
     except HTTPException:
         raise
-    except Exception as e:  # noqa: BLE001 - FastAPI endpoint boundary: translate to a clean HTTP error, don't leak a raw traceback
-        raise HTTPException(status_code=500, detail=f"Database error: {e}")
+    except Exception as e:  # FastAPI endpoint boundary: translate to a clean HTTP error, don't leak a raw traceback
+        raise HTTPException(status_code=500, detail=f"Database error: {e}") from e
 
 
 @app.post("/api/session/debrief")
