@@ -44,9 +44,7 @@ def test_run_command(mock_db, mock_resolve, mock_mount, mock_uvicorn, tmp_path):
 
     # Run with dry-run and no-llm to minimize side effects
     # Since it's a single command app, we don't need "run"
-    result = runner.invoke(
-        app, ["--dry-run", "--no-llm", "--db-path", str(tmp_path / "test.db")]
-    )
+    result = runner.invoke(app, ["--dry-run", "--no-llm", "--db-path", str(tmp_path / "test.db")])
 
     assert result.exit_code == 0
     assert "Starting Japanese Tutor at http://localhost:8421" in result.stdout
@@ -78,9 +76,7 @@ def test_run_command_initializes_llm_helper_with_provider(
     prior_helper = api.llm_helper
     assigned_helper = None
     try:
-        result = runner.invoke(
-            app, ["--no-llm", "--db-path", str(tmp_path / "test.db")]
-        )
+        result = runner.invoke(app, ["--no-llm", "--db-path", str(tmp_path / "test.db")])
         assigned_helper = api.llm_helper
     finally:
         api.llm_helper = prior_helper

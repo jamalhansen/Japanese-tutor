@@ -1,4 +1,3 @@
-
 from local_first_common.providers.base import BaseProvider
 from pydantic import BaseModel
 from pydantic import ValidationError as PydanticValidationError
@@ -7,8 +6,10 @@ from pydantic import ValidationError as PydanticValidationError
 class MnemonicSuggestion(BaseModel):
     body: str
 
+
 class MnemonicList(BaseModel):
     suggestions: list[MnemonicSuggestion]
+
 
 class LLMHelper:
     def __init__(self, provider: BaseProvider):
@@ -27,17 +28,11 @@ class LLMHelper:
         )
 
         self.provider.source_location = f"mnemonic:{character}"
-        raw_result = self.provider.complete(
-            system=system,
-            user=user,
-            response_model=MnemonicList
-        )
+        raw_result = self.provider.complete(system=system, user=user, response_model=MnemonicList)
         try:
             result = MnemonicList.model_validate(raw_result)
         except PydanticValidationError as e:
-            raise RuntimeError(
-                f"LLM returned unexpected format for mnemonics: {e}"
-            ) from e
+            raise RuntimeError(f"LLM returned unexpected format for mnemonics: {e}") from e
         return [s.body for s in result.suggestions]
 
     def generate_adaptive_example(self, character: str, mastered_vocab: list[str]) -> str:

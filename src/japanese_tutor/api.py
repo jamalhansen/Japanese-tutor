@@ -141,9 +141,7 @@ def start_session(req: SessionStartRequest):
     if not db:
         raise HTTPException(status_code=500, detail="Database not initialized")
     try:
-        session_id = db.start_session(
-            stage=req.stage, provider=req.provider, model=req.model
-        )
+        session_id = db.start_session(stage=req.stage, provider=req.provider, model=req.model)
         return {"session_id": session_id}
     except Exception as e:  # FastAPI endpoint boundary: translate to a clean HTTP error, don't leak a raw traceback
         raise HTTPException(status_code=500, detail=f"Database error: {e}") from e
@@ -217,16 +215,12 @@ def save_mnemonic(req: MnemonicSaveRequest):
 def mount_static(module_root: Path):
     static_path = module_root / "static"
     if static_path.exists():
-        app.mount(
-            "/", StaticFiles(directory=str(static_path), html=True), name="static"
-        )
+        app.mount("/", StaticFiles(directory=str(static_path), html=True), name="static")
     else:
         # Fallback for development when static assets live at the repository root.
         static_path = module_root.parent.parent / "static"
         if static_path.exists():
-            app.mount(
-                "/", StaticFiles(directory=str(static_path), html=True), name="static"
-            )
+            app.mount("/", StaticFiles(directory=str(static_path), html=True), name="static")
 
 
 def start_server(port: int, pkg_root: Path):

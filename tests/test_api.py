@@ -104,9 +104,7 @@ def test_get_example(mock_state):
 
 def test_mnemonics(mock_state):
     api.llm_helper.generate_mnemonics.return_value = ["Mnemonic 1"]
-    response = client.post(
-        "/api/mnemonics/generate", json={"character": "あ", "romaji": "a"}
-    )
+    response = client.post("/api/mnemonics/generate", json={"character": "あ", "romaji": "a"})
     assert response.status_code == 200
     assert response.json() == {"suggestions": ["Mnemonic 1"]}
 
@@ -132,9 +130,7 @@ def test_start_session(mock_state):
     response = client.post("/api/session/start", json={"stage": "hiragana"})
     assert response.status_code == 200
     assert response.json() == {"session_id": 42}
-    api.db.start_session.assert_called_once_with(
-        stage="hiragana", provider=None, model=None
-    )
+    api.db.start_session.assert_called_once_with(stage="hiragana", provider=None, model=None)
 
 
 def test_end_session(mock_state):
@@ -171,9 +167,7 @@ def test_submit_review_updates_session(mock_state):
         "interval_days": 0,
         "easiness_factor": 2.5,
     }
-    response = client.post(
-        "/api/reviews", json={"card_id": 1, "rating": 4, "session_id": 7}
-    )
+    response = client.post("/api/reviews", json={"card_id": 1, "rating": 4, "session_id": 7})
     assert response.status_code == 200
     api.db.update_session_stats.assert_called_once_with(7, 4)
 

@@ -38,9 +38,7 @@ app = typer.Typer(help="Japanese Tutor SRS application.")
 def run(
     port: int | None = typer.Option(None, help="Server port"),
     db_path: Annotated[Path | None, typer.Option(help="Custom SQLite DB path")] = None,
-    provider: Annotated[str, provider_option()] = os.environ.get(
-        "MODEL_PROVIDER", "ollama"
-    ),
+    provider: Annotated[str, provider_option()] = os.environ.get("MODEL_PROVIDER", "ollama"),
     model: Annotated[str | None, model_option()] = None,
     dry_run: Annotated[bool, dry_run_option()] = False,
     no_llm: Annotated[bool, no_llm_option()] = False,
@@ -52,9 +50,7 @@ def run(
 
     # 1. Resolve configuration with standard precedence
     actual_port = get_setting(TOOL_NAME, "port", cli_val=port, default=8421)
-    actual_provider = get_setting(
-        TOOL_NAME, "provider", cli_val=provider, default="ollama"
-    )
+    actual_provider = get_setting(TOOL_NAME, "provider", cli_val=provider, default="ollama")
     actual_model = get_setting(TOOL_NAME, "model", cli_val=model)
 
     # 2. Initialize database

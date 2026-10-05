@@ -73,9 +73,7 @@ def test_non_practice_backfills_to_limit(db):
 
     # Make only one card truly due; other cards are in the future.
     with db._get_connection() as conn:
-        conn.execute(
-            "UPDATE cards SET next_review_at = '2099-01-01T00:00:00' WHERE id != 1"
-        )
+        conn.execute("UPDATE cards SET next_review_at = '2099-01-01T00:00:00' WHERE id != 1")
 
     cards = db.get_due_cards(limit=3, practice=False)
     assert len(cards) == 3
@@ -98,9 +96,7 @@ def test_get_due_count_does_not_backfill(db):
 
     # Make only one card truly due; other cards are in the future.
     with db._get_connection() as conn:
-        conn.execute(
-            "UPDATE cards SET next_review_at = '2099-01-01T00:00:00' WHERE id != 1"
-        )
+        conn.execute("UPDATE cards SET next_review_at = '2099-01-01T00:00:00' WHERE id != 1")
 
     # get_due_cards() backfills to 3 (limit's default of 20, capped by deck size)
     assert len(db.get_due_cards()) == 3
@@ -137,7 +133,9 @@ def test_get_due_breakdown_splits_new_from_review(db):
     db.populate_characters(chars)
     cards = db.get_due_cards()
     reviewed_card_id = cards[0]["card_id"]
-    db.update_card(reviewed_card_id, 5, 1, 1, 2.6)  # now repetitions=1, due again immediately (interval unspecified -> next_review recalculated)
+    db.update_card(
+        reviewed_card_id, 5, 1, 1, 2.6
+    )  # now repetitions=1, due again immediately (interval unspecified -> next_review recalculated)
 
     # Force the just-reviewed card back into the due window so it counts
     # as a real "review" (not "new") for this assertion.
@@ -197,8 +195,7 @@ def test_get_reviews_today_count_excludes_reviews_from_before_local_midnight(
     # Backdate the just-inserted review to well before today.
     with db_with_card._get_connection() as conn:
         conn.execute(
-            "UPDATE reviews SET reviewed_at = '2020-01-01T00:00:00+00:00' "
-            "WHERE card_id = ?",
+            "UPDATE reviews SET reviewed_at = '2020-01-01T00:00:00+00:00' WHERE card_id = ?",
             (card_id,),
         )
 
@@ -220,9 +217,7 @@ def test_save_mnemonic_idempotent(db_with_card):
     db_with_card.save_mnemonic(char_id, "Updated mnemonic", source="llm")
 
     with db_with_card._get_connection() as conn:
-        rows = conn.execute(
-            "SELECT body, source FROM associations WHERE character_id = ?", (char_id,)
-        ).fetchall()
+        rows = conn.execute("SELECT body, source FROM associations WHERE character_id = ?", (char_id,)).fetchall()
     assert len(rows) == 1
     assert rows[0]["body"] == "Updated mnemonic"
     assert rows[0]["source"] == "llm"

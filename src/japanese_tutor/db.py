@@ -191,9 +191,7 @@ class Database:
         ("you retried the same few cards"), not visible from either number
         alone. reviewed_at is stored in UTC; "today" is the local calendar
         day, converted to a UTC boundary for the comparison."""
-        local_midnight = datetime.now().astimezone().replace(
-            hour=0, minute=0, second=0, microsecond=0
-        )
+        local_midnight = datetime.now().astimezone().replace(hour=0, minute=0, second=0, microsecond=0)
         since_utc = local_midnight.astimezone(UTC).isoformat()
         with self._get_connection() as conn:
             row = conn.execute(
@@ -206,9 +204,7 @@ class Database:
                 "distinct_cards": row["distinct_cards"] if row else 0,
             }
 
-    def get_due_cards(
-        self, stage: str | None = None, limit: int = 20, practice: bool = False
-    ) -> list[dict[str, Any]]:
+    def get_due_cards(self, stage: str | None = None, limit: int = 20, practice: bool = False) -> list[dict[str, Any]]:
         now_str = datetime.now(UTC).isoformat()
         with self._get_connection() as conn:
             base_query = """
@@ -243,9 +239,7 @@ class Database:
             due_query += " ORDER BY c.next_review_at LIMIT ?"
             due_params.append(limit)
 
-            due_cards = [
-                dict(row) for row in conn.execute(due_query, due_params).fetchall()
-            ]
+            due_cards = [dict(row) for row in conn.execute(due_query, due_params).fetchall()]
             if len(due_cards) >= limit:
                 return due_cards
 
@@ -266,9 +260,7 @@ class Database:
             fill_query += " ORDER BY c.repetitions ASC, c.next_review_at ASC LIMIT ?"
             fill_params.append(remaining)
 
-            fill_cards = [
-                dict(row) for row in conn.execute(fill_query, fill_params).fetchall()
-            ]
+            fill_cards = [dict(row) for row in conn.execute(fill_query, fill_params).fetchall()]
             return due_cards + fill_cards
 
     def update_card(

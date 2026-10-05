@@ -7,6 +7,7 @@ gateway via self.provider.source_location instead, set before the call
 (item_count is dropped where it depended on the response, like the number
 of mnemonics returned -- unknowable before the request is sent).
 """
+
 from local_first_common.testing import MockProvider
 
 from japanese_tutor.llm import LLMHelper

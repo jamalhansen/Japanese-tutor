@@ -12,30 +12,21 @@ def export_to_csv(cards: list[VocabularyCard | KanjiCard | GrammarCard], output_
 
     # Determine headers based on card type
     card_type = type(cards[0])
-    
+
     if card_type == VocabularyCard:
         headers = ["Kanji", "Furigana", "English", "Notes"]
-        rows = [[c.kanji, c.furigana or "", c.english, c.notes or ""] for c in cards] # type: ignore
+        rows = [[c.kanji, c.furigana or "", c.english, c.notes or ""] for c in cards]  # type: ignore
     elif card_type == KanjiCard:
         headers = ["Character", "On-yomi", "Kun-yomi", "Meaning", "Examples"]
         rows = [
-            [
-                c.character, 
-                ", ".join(c.on_yomi), 
-                ", ".join(c.kun_yomi), 
-                c.meaning, 
-                "; ".join(c.examples)
-            ] for c in cards # type: ignore
+            [c.character, ", ".join(c.on_yomi), ", ".join(c.kun_yomi), c.meaning, "; ".join(c.examples)]
+            for c in cards  # type: ignore
         ]
     elif card_type == GrammarCard:
         headers = ["Pattern", "Explanation", "Usage", "Examples"]
         rows = [
-            [
-                c.pattern, 
-                c.explanation, 
-                c.usage or "", 
-                "; ".join(c.examples)
-            ] for c in cards # type: ignore
+            [c.pattern, c.explanation, c.usage or "", "; ".join(c.examples)]
+            for c in cards  # type: ignore
         ]
     else:
         raise ValueError(f"Unknown card type: {card_type}")
@@ -45,24 +36,27 @@ def export_to_csv(cards: list[VocabularyCard | KanjiCard | GrammarCard], output_
         writer.writerow(headers)
         writer.writerows(rows)
 
+
 def cards_to_string(cards: list[VocabularyCard | KanjiCard | GrammarCard]) -> str:
     """Convert cards to a CSV string for previewing in dry-run."""
     if not cards:
         return "No cards generated."
-        
+
     output = io.StringIO()
     # Logic similar to export_to_csv but writing to string
     card_type = type(cards[0])
     if card_type == VocabularyCard:
         headers = ["Kanji", "Furigana", "English", "Notes"]
-        rows = [[c.kanji, c.furigana or "", c.english, c.notes or ""] for c in cards] # type: ignore
+        rows = [[c.kanji, c.furigana or "", c.english, c.notes or ""] for c in cards]  # type: ignore
     elif card_type == KanjiCard:
         headers = ["Character", "On-yomi", "Kun-yomi", "Meaning", "Examples"]
-        rows = [[c.character, ", ".join(c.on_yomi), ", ".join(c.kun_yomi), c.meaning, "; ".join(c.examples)] for c in cards] # type: ignore
+        rows = [
+            [c.character, ", ".join(c.on_yomi), ", ".join(c.kun_yomi), c.meaning, "; ".join(c.examples)] for c in cards
+        ]  # type: ignore
     elif card_type == GrammarCard:
         headers = ["Pattern", "Explanation", "Usage", "Examples"]
-        rows = [[c.pattern, c.explanation, c.usage or "", "; ".join(c.examples)] for c in cards] # type: ignore
-    
+        rows = [[c.pattern, c.explanation, c.usage or "", "; ".join(c.examples)] for c in cards]  # type: ignore
+
     writer = csv.writer(output)
     writer.writerow(headers)
     writer.writerows(rows)

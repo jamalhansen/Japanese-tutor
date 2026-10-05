@@ -16,6 +16,7 @@ from .schema import GrammarCard, KanjiCard, ReviewResult, VocabularyCard
 
 logger = logging.getLogger(__name__)
 
+
 class TutorLogic:
     def __init__(self, provider: BaseProvider, ocr_client: OCRClient | None = None):
         self.provider = provider
@@ -25,8 +26,8 @@ class TutorLogic:
         """Use Gemini (Vision) to check if the image is a valid Japanese textbook page."""
         system = get_suitability_system_prompt()
         user = "Is this image suitable for Japanese flashcard extraction?"
-        
-        # We need an image-capable model for this. 
+
+        # We need an image-capable model for this.
         # local-first-common GeminiProvider handles images if passed.
         # Every provider's images= expects a base64-encoded string, not raw bytes
         # (GatewayProvider in particular has to fit this into a JSON request body).
@@ -35,22 +36,14 @@ class TutorLogic:
 
         self.provider.source_location = str(image_path)
         self.provider.item_count = 1
-        raw_result = self.provider.complete(
-            system=system,
-            user=user,
-            response_model=ReviewResult,
-            images=[img_data]
-        )
+        raw_result = self.provider.complete(system=system, user=user, response_model=ReviewResult, images=[img_data])
         return ReviewResult.model_validate(raw_result)
 
     def process_image(
-        self,
-        image_path: Path,
-        mode: Literal["vocabulary", "kanji", "grammar"],
-        custom_instructions: str = ""
+        self, image_path: Path, mode: Literal["vocabulary", "kanji", "grammar"], custom_instructions: str = ""
     ) -> list[VocabularyCard | KanjiCard | GrammarCard]:
         """Main workflow: Suitability -> OCR -> Extraction."""
-        
+
         # 1. Suitability Check
         review = self.check_suitability(image_path)
         if review.suitability == "fail":
@@ -70,24 +63,20 @@ class TutorLogic:
             "kanji": KanjiCard,
             "grammar": GrammarCard,
         }
-        
+
         # The LLM often needs to return a LIST of these objects.
         # We'll wrap the schema in a list container if needed, or just ask for a list.
         # For now, let's assume the provider can handle a List[T] if we define it.
         # Actually, let's define a wrapper schema for the list.
-        
+
         class CardList(BaseModel):
-            cards: list[schema_map[mode]] # type: ignore
+            cards: list[schema_map[mode]]  # type: ignore
 
         system = get_extraction_system_prompt(mode)
         user = get_user_prompt(ocr_text, custom_instructions)
-        
+
         logger.info(f"Extracting {mode} data using LLM...")
         self.provider.source_location = str(image_path)
-        raw_result = self.provider.complete(
-            system=system,
-            user=user,
-            response_model=CardList
-        )
+        raw_result = self.provider.complete(system=system, user=user, response_model=CardList)
         result = CardList.model_validate(raw_result)
         return result.cards
