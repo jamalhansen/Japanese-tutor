@@ -29,6 +29,7 @@ llm_helper: LLMHelper | None = None
 def _resolve_current_stage(stage: str | None) -> str:
     if stage is not None:
         return stage
+    assert db is not None  # every route checks db before resolving the stage
     if not db.is_stage_mastered("hiragana"):
         return "hiragana"
     if not db.is_stage_mastered("katakana"):

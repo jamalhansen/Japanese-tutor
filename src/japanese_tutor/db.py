@@ -232,7 +232,7 @@ class Database:
             # Normal study mode:
             # 1) take all currently due cards first
             due_query = base_query + " AND c.next_review_at <= ?"
-            due_params = [now_str]
+            due_params: list[str | int] = [now_str]
             if stage:
                 due_query += " AND ch.stage = ?"
                 due_params.append(stage)
@@ -248,7 +248,7 @@ class Database:
             exclude_ids = [row["card_id"] for row in due_cards]
 
             fill_query = base_query + " AND c.next_review_at > ?"
-            fill_params = [now_str]
+            fill_params: list[str | int] = [now_str]
             if stage:
                 fill_query += " AND ch.stage = ?"
                 fill_params.append(stage)
@@ -436,6 +436,7 @@ class Database:
             """,
                 (now_str, stage, provider, model),
             )
+            assert cursor.lastrowid is not None  # set by the INSERT just above
             return cursor.lastrowid
 
     def end_session(self, session_id: int) -> None:

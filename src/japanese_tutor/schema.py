@@ -5,9 +5,9 @@ from pydantic import BaseModel, Field
 
 class VocabularyCard(BaseModel):
     kanji: str = Field(..., description="The word in Kanji/Kana.")
-    furigana: str | None = Field(None, description="Furigana for the Kanji.")
+    furigana: str | None = Field(default=None, description="Furigana for the Kanji.")
     english: str = Field(..., description="English translation.")
-    notes: str | None = Field(None, description="Contextual notes or usage examples.")
+    notes: str | None = Field(default=None, description="Contextual notes or usage examples.")
 
 
 class KanjiCard(BaseModel):
@@ -21,13 +21,13 @@ class KanjiCard(BaseModel):
 class GrammarCard(BaseModel):
     pattern: str = Field(..., description="The grammar pattern (e.g., ~は~です).")
     explanation: str = Field(..., description="Explanation of the grammar rule.")
-    usage: str | None = Field(None, description="Usage rules or nuances.")
+    usage: str | None = Field(default=None, description="Usage rules or nuances.")
     examples: list[str] = Field(default_factory=list, description="Example sentences.")
 
 
 class ReviewResult(BaseModel):
     suitability: Literal["pass", "fail", "warn"] = Field(..., description="Suitability of the image for extraction.")
-    reason: str | None = Field(None, description="Reason for the suitability status.")
+    reason: str | None = Field(default=None, description="Reason for the suitability status.")
     post_type: Literal["vocabulary", "kanji", "grammar", "mixed"] = Field(..., description="Inferred content type.")
     word_count: int = Field(..., description="Approximate word count of extracted text.")
     summary: str = Field(..., description="2-3 sentence verdict on the extraction.")

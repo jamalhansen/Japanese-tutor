@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 
-from unstract.llmwhisperer import LLMWhispererClientV2
+from unstract.llmwhisperer.client_v2 import LLMWhispererClientV2
 
 
 class OCRError(Exception):

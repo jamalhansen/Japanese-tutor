@@ -9,6 +9,18 @@ from japanese_tutor import api
 client = TestClient(api.app)
 
 
+def _db() -> MagicMock:
+    """The MagicMock the mock_state fixture puts in api.db."""
+    assert isinstance(api.db, MagicMock)
+    return api.db
+
+
+def _llm() -> MagicMock:
+    """The MagicMock the mock_state fixture puts in api.llm_helper."""
+    assert isinstance(api.llm_helper, MagicMock)
+    return api.llm_helper
+
+
 @pytest.fixture
 def mock_state():
     api.db = MagicMock()
@@ -19,52 +31,52 @@ def mock_state():
 
 
 def test_get_due_cards(mock_state):
-    api.db.is_stage_mastered.return_value = False
-    api.db.get_due_cards.return_value = [{"id": 1, "char": "あ"}]
+    _db().is_stage_mastered.return_value = False
+    _db().get_due_cards.return_value = [{"id": 1, "char": "あ"}]
 
     response = client.get("/api/cards/due")
     assert response.status_code == 200
     assert response.json() == [{"id": 1, "char": "あ"}]
-    api.db.get_due_cards.assert_called_with(stage="hiragana", practice=False)
+    _db().get_due_cards.assert_called_with(stage="hiragana", practice=False)
 
 
 def test_get_due_cards_practice(mock_state):
-    api.db.is_stage_mastered.return_value = False
-    api.db.get_due_cards.return_value = [{"id": 1, "char": "あ"}]
+    _db().is_stage_mastered.return_value = False
+    _db().get_due_cards.return_value = [{"id": 1, "char": "あ"}]
 
     response = client.get("/api/cards/due?practice=true")
     assert response.status_code == 200
-    api.db.get_due_cards.assert_called_with(stage="hiragana", practice=True)
+    _db().get_due_cards.assert_called_with(stage="hiragana", practice=True)
 
 
 def test_get_due_count(mock_state):
     """Regression 2026-09-20: /api/cards/due always returns `limit` cards
     (backfilled with not-yet-due ones), so its length never reflects real
     progress. /api/cards/due/count is the true overdue count."""
-    api.db.is_stage_mastered.return_value = False
-    api.db.get_due_count.return_value = 3
-    api.db.get_due_breakdown.return_value = {"new": 2, "review": 1}
+    _db().is_stage_mastered.return_value = False
+    _db().get_due_count.return_value = 3
+    _db().get_due_breakdown.return_value = {"new": 2, "review": 1}
 
     response = client.get("/api/cards/due/count")
     assert response.status_code == 200
     assert response.json() == {"due_count": 3, "new_count": 2, "review_count": 1}
-    api.db.get_due_count.assert_called_with(stage="hiragana")
-    api.db.get_due_breakdown.assert_called_with(stage="hiragana")
+    _db().get_due_count.assert_called_with(stage="hiragana")
+    _db().get_due_breakdown.assert_called_with(stage="hiragana")
 
 
 def test_get_due_count_explicit_stage(mock_state):
-    api.db.get_due_count.return_value = 0
-    api.db.get_due_breakdown.return_value = {"new": 0, "review": 0}
+    _db().get_due_count.return_value = 0
+    _db().get_due_breakdown.return_value = {"new": 0, "review": 0}
 
     response = client.get("/api/cards/due/count?stage=katakana")
     assert response.status_code == 200
-    api.db.get_due_count.assert_called_with(stage="katakana")
-    api.db.get_due_breakdown.assert_called_with(stage="katakana")
-    api.db.is_stage_mastered.assert_not_called()
+    _db().get_due_count.assert_called_with(stage="katakana")
+    _db().get_due_breakdown.assert_called_with(stage="katakana")
+    _db().is_stage_mastered.assert_not_called()
 
 
 def test_get_reviews_today(mock_state):
-    api.db.get_reviews_today_count.return_value = {
+    _db().get_reviews_today_count.return_value = {
         "attempts": 3,
         "distinct_cards": 2,
     }
@@ -75,7 +87,7 @@ def test_get_reviews_today(mock_state):
 
 
 def test_submit_review(mock_state):
-    api.db.get_card.return_value = {
+    _db().get_card.return_value = {
         "id": 1,
         "repetitions": 0,
         "interval_days": 0,
@@ -85,25 +97,25 @@ def test_submit_review(mock_state):
     response = client.post("/api/reviews", json={"card_id": 1, "rating": 4})
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
-    api.db.update_card.assert_called_once()
+    _db().update_card.assert_called_once()
 
 
 def test_get_mastery(mock_state):
-    api.db.get_mastery_stats.return_value = {"hiragana": 0.5}
+    _db().get_mastery_stats.return_value = {"hiragana": 0.5}
     response = client.get("/api/mastery")
     assert response.status_code == 200
     assert response.json() == {"hiragana": 0.5}
 
 
 def test_get_example(mock_state):
-    api.llm_helper.generate_adaptive_example.return_value = "Example sentence"
+    _llm().generate_adaptive_example.return_value = "Example sentence"
     response = client.get("/api/example/あ")
     assert response.status_code == 200
     assert response.json() == {"example": "Example sentence"}
 
 
 def test_mnemonics(mock_state):
-    api.llm_helper.generate_mnemonics.return_value = ["Mnemonic 1"]
+    _llm().generate_mnemonics.return_value = ["Mnemonic 1"]
     response = client.post("/api/mnemonics/generate", json={"character": "あ", "romaji": "a"})
     assert response.status_code == 200
     assert response.json() == {"suggestions": ["Mnemonic 1"]}
@@ -126,42 +138,42 @@ def test_submit_review_invalid_rating_negative(mock_state):
 
 
 def test_start_session(mock_state):
-    api.db.start_session.return_value = 42
+    _db().start_session.return_value = 42
     response = client.post("/api/session/start", json={"stage": "hiragana"})
     assert response.status_code == 200
     assert response.json() == {"session_id": 42}
-    api.db.start_session.assert_called_once_with(stage="hiragana", provider=None, model=None)
+    _db().start_session.assert_called_once_with(stage="hiragana", provider=None, model=None)
 
 
 def test_end_session(mock_state):
     response = client.post("/api/session/end/42")
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
-    api.db.end_session.assert_called_once_with(42)
+    _db().end_session.assert_called_once_with(42)
 
 
 def test_get_sessions(mock_state):
-    api.db.get_sessions.return_value = [{"id": 1, "cards_reviewed": 5}]
+    _db().get_sessions.return_value = [{"id": 1, "cards_reviewed": 5}]
     response = client.get("/api/sessions")
     assert response.status_code == 200
     assert response.json()[0]["id"] == 1
 
 
 def test_get_session_detail(mock_state):
-    api.db.get_session.return_value = {"id": 1, "cards_reviewed": 5, "reviews": []}
+    _db().get_session.return_value = {"id": 1, "cards_reviewed": 5, "reviews": []}
     response = client.get("/api/sessions/1")
     assert response.status_code == 200
     assert response.json()["id"] == 1
 
 
 def test_get_session_not_found(mock_state):
-    api.db.get_session.return_value = None
+    _db().get_session.return_value = None
     response = client.get("/api/sessions/9999")
     assert response.status_code == 404
 
 
 def test_submit_review_updates_session(mock_state):
-    api.db.get_card.return_value = {
+    _db().get_card.return_value = {
         "id": 1,
         "repetitions": 0,
         "interval_days": 0,
@@ -169,7 +181,7 @@ def test_submit_review_updates_session(mock_state):
     }
     response = client.post("/api/reviews", json={"card_id": 1, "rating": 4, "session_id": 7})
     assert response.status_code == 200
-    api.db.update_session_stats.assert_called_once_with(7, 4)
+    _db().update_session_stats.assert_called_once_with(7, 4)
 
 
 def test_mount_static_serves_index_from_module_static(tmp_path, monkeypatch):
