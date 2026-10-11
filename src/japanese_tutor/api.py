@@ -71,6 +71,18 @@ def get_due_count(stage: str | None = None):
         raise HTTPException(status_code=500, detail=f"Database error: {e}") from e
 
 
+@app.get("/api/reviews/days")
+def get_review_days(days: int = 371):
+    """Reviews per local day, oldest first, with current and longest streaks: the
+    GitHub-style grid on the Progress view and on the fleet dashboard."""
+    if not db:
+        raise HTTPException(status_code=500, detail="Database not initialized")
+    try:
+        return db.get_review_days(days=max(1, min(days, 731)))
+    except Exception as e:  # FastAPI endpoint boundary: translate to a clean HTTP error, don't leak a raw traceback
+        raise HTTPException(status_code=500, detail=f"Database error: {e}") from e
+
+
 @app.get("/api/reviews/today")
 def get_reviews_today():
     """Real review effort today -- distinct from the due count, which

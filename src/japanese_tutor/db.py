@@ -181,6 +181,50 @@ class Database:
                 "review": (row["review_count"] or 0) if row else 0,
             }
 
+    def get_review_days(self, days: int = 371) -> dict[str, Any]:
+        """Reviews per local calendar day for the last `days` days, oldest first, plus the
+        current and longest streaks (a day counts with any review at all). Days with no
+        reviews are included as zeros so a heatmap can be drawn straight from the list.
+        Added 2026-10-11 for the GitHub-style grid. `level` shades by reviews that day:
+        0 none, 1 for 1-9, 2 for 10-19, 3 for 20+."""
+        today = datetime.now().astimezone().date()
+        start = today - timedelta(days=days - 1)
+        counts: dict[str, tuple[int, int]] = {}
+        with self._get_connection() as conn:
+            rows = conn.execute("SELECT card_id, reviewed_at FROM reviews").fetchall()
+        per_day: dict[Any, list[int]] = {}
+        for row in rows:
+            try:
+                local = datetime.fromisoformat(str(row["reviewed_at"])).astimezone().date()
+            except ValueError:
+                continue
+            per_day.setdefault(local, []).append(row["card_id"])
+        for day, cards in per_day.items():
+            counts[day.isoformat()] = (len(cards), len(set(cards)))
+        out = []
+        for n in range(days):
+            day = start + timedelta(days=n)
+            reviews, distinct = counts.get(day.isoformat(), (0, 0))
+            level = 0 if reviews == 0 else 1 if reviews < 10 else 2 if reviews < 20 else 3
+            out.append({"day": day.isoformat(), "reviews": reviews, "distinct_cards": distinct, "level": level})
+        active = sorted(d for d in per_day if d <= today)
+        longest = run = 0
+        prev = None
+        for d in active:
+            run = run + 1 if prev is not None and (d - prev).days == 1 else 1
+            longest, prev = max(longest, run), d
+        current = 0
+        cursor = today if today in per_day else today - timedelta(days=1)  # today still open
+        while cursor in per_day:
+            current, cursor = current + 1, cursor - timedelta(days=1)
+        return {
+            "days": out,
+            "current_streak": current,
+            "longest_streak": longest,
+            "active_days": sum(1 for d in out if d["reviews"]),
+            "reviewed_today": today in per_day,
+        }
+
     def get_reviews_today_count(self) -> dict[str, int]:
         """Real review activity since local midnight -- distinct from due-card
         counts, which reflect backlog, not effort. Found live 2026-09-20:

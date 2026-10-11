@@ -75,6 +75,13 @@ def test_get_due_count_explicit_stage(mock_state):
     _db().is_stage_mastered.assert_not_called()
 
 
+def test_get_review_days(mock_state):
+    _db().get_review_days.return_value = {"days": [], "current_streak": 0, "longest_streak": 0}
+    response = client.get("/api/reviews/days?days=5000")
+    assert response.status_code == 200
+    _db().get_review_days.assert_called_with(days=731)
+
+
 def test_get_reviews_today(mock_state):
     _db().get_reviews_today_count.return_value = {
         "attempts": 3,

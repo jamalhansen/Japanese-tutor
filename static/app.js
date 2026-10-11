@@ -238,6 +238,34 @@ function showView(viewName) {
   document.getElementById(`${viewName}-view`).classList.remove("hidden");
   if (viewName === "progress") {
     renderProgress();
+    renderStreak();
+  }
+}
+
+// GitHub-style year grid: any review lights a day; 1-9, 10-19, 20+ reviews get darker.
+const STREAK_SHADES = ["#ebedf0", "#c6e48b", "#7bc96f", "#239a3b"];
+
+async function renderStreak() {
+  const el = document.getElementById("streak");
+  try {
+    const r = await (await fetch("/api/reviews/days")).json();
+    const first = new Date(r.days[0].day + "T00:00:00");
+    const pad = Array.from({ length: first.getDay() }, () => '<div class="streak-cell" style="visibility:hidden"></div>');
+    const cells = r.days.map(
+      (d) => `<div class="streak-cell" title="${d.day}: ${d.reviews} review${d.reviews === 1 ? "" : "s"}" style="background:${STREAK_SHADES[d.level]}"></div>`,
+    );
+    const legend = STREAK_SHADES.map((c) => `<span class="streak-cell" style="background:${c};display:inline-block"></span>`).join("");
+    el.innerHTML = `
+      <div class="streak-head">
+        <strong>${r.current_streak}</strong> day streak${r.reviewed_today ? "" : " (review today to keep it)"}
+        &middot; longest ${r.longest_streak} &middot; ${r.active_days} days in the last year
+      </div>
+      <div class="streak-scroll"><div class="streak-grid">${pad.join("") + cells.join("")}</div></div>
+      <div class="streak-legend">Less ${legend} More &middot; 1-9, 10-19, 20+ reviews</div>`;
+    const scroll = el.querySelector(".streak-scroll");
+    scroll.scrollLeft = scroll.scrollWidth;
+  } catch (e) {
+    el.innerHTML = "";
   }
 }
 

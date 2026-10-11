@@ -281,3 +281,41 @@ def test_get_session_not_found(db):
 
 def test_get_sessions_empty(db):
     assert db.get_sessions() == []
+
+
+def test_review_days_streaks_and_levels(db):
+    """Any review lights a day; 1-9 / 10-19 / 20+ reviews shade darker. Streak counts
+    back from today, or from yesterday while today is still open."""
+    from datetime import datetime, timedelta
+
+    chars = [
+        {"char": c, "romaji": c, "stage": "hiragana"} for c in "あいうえおかきくけこさしすせそたちつてとなにぬねの"
+    ]
+    db.populate_characters(chars)
+    card_ids = [c["card_id"] for c in db.get_due_cards(limit=40)]
+    today = datetime.now().astimezone().replace(hour=12, minute=0, second=0, microsecond=0)
+
+    def review(card, day_offset):
+        db.update_card(card, 5, 1, 1, 2.5)
+        when = (today - timedelta(days=day_offset)).isoformat()
+        with db._get_connection() as conn:
+            conn.execute("UPDATE reviews SET reviewed_at = ? WHERE id = (SELECT MAX(id) FROM reviews)", (when,))
+
+    for card in card_ids[:3]:
+        review(card, 1)  # yesterday: 3 reviews
+    for card in card_ids[:12]:
+        review(card, 2)  # 2 days ago: 12 reviews
+    for card in card_ids[:21]:
+        review(card, 5)  # 5 days ago: 21 reviews
+
+    r = db.get_review_days(days=10)
+    assert len(r["days"]) == 10 and r["days"][-1]["day"] == today.date().isoformat()
+    by_day = {d["day"]: d for d in r["days"]}
+    level = lambda n: by_day[(today - timedelta(days=n)).date().isoformat()]["level"]
+    assert (level(0), level(1), level(2), level(5), level(3)) == (0, 1, 2, 3, 0)
+    assert by_day[(today - timedelta(days=2)).date().isoformat()]["distinct_cards"] == 12
+    assert (r["current_streak"], r["longest_streak"], r["active_days"], r["reviewed_today"]) == (2, 2, 3, False)
+
+    review(card_ids[0], 0)
+    r = db.get_review_days(days=10)
+    assert (r["current_streak"], r["reviewed_today"]) == (3, True)
